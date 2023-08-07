@@ -3,7 +3,7 @@ module github.com/artnikel/APIService
 go 1.20
 
 require (
-	github.com/artnikel/ProfileService v0.0.0-20230804084513-d22e3161b26c
+	github.com/artnikel/ProfileService v0.0.0-20230807074234-e9d78f9452da
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/go-playground/validator/v10 v10.14.1
 	github.com/golang-jwt/jwt v3.2.2+incompatible

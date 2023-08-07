@@ -55,6 +55,7 @@ func (us *UserService) SignUp(ctx context.Context, user *model.User) error {
 	return nil
 }
 
+// Login is a method of UserService that getting password and id, then checked password hash, generating tokens and added refresh token to database.
 func (us *UserService) Login(ctx context.Context, user *model.User) (*model.TokenPair, error) {
 	hash, id, err := us.uRep.GetByLogin(ctx, user.Login)
 	user.ID = id
@@ -157,7 +158,7 @@ func (us *UserService) TokensIDCompare(tokenPair *model.TokenPair) (uuid.UUID, e
 		}
 	}
 	if accessID != refreshID {
-		return uuid.Nil, fmt.Errorf("UserService-TokensIDCompare: error: user ID in acess token doesn't equal user ID in refresh token")
+		return uuid.Nil, fmt.Errorf("UserService-TokensIDCompare: error: user ID in access token doesn't equal user ID in refresh token")
 	}
 	return accessID, nil
 }
@@ -210,8 +211,7 @@ func (us *UserService) GenerateJWTToken(expiration time.Duration, id uuid.UUID) 
 	return tokenString, nil
 }
 
-// ValidateToken validates the JWT token using the secret key.
-// It checks the signing method and returns the parsed token if it is valid.
+// ValidateToken validates the JWT token using the secret key, it checks the signing method and returns the parsed token if it is valid.
 func (us *UserService) ValidateToken(tokenString, secretKey string) (*jwt.Token, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

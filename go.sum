@@ -1,5 +1,5 @@
-github.com/artnikel/ProfileService v0.0.0-20230804084513-d22e3161b26c h1:I/cZfpnIFNavEbQDcISopZ7CINCOQGq+aRmP/ie6l0s=
-github.com/artnikel/ProfileService v0.0.0-20230804084513-d22e3161b26c/go.mod h1:lY+lRd1Rxdn51qaW9yMl56/eN4TsfCLBxH1QZH0FEfg=
+github.com/artnikel/ProfileService v0.0.0-20230807074234-e9d78f9452da h1:TNmRCNpMGFEX6fd1q364rqMHVVqbwsQgmAlwLrHLu88=
+github.com/artnikel/ProfileService v0.0.0-20230807074234-e9d78f9452da/go.mod h1:lY+lRd1Rxdn51qaW9yMl56/eN4TsfCLBxH1QZH0FEfg=
 github.com/caarlos0/env v3.5.0+incompatible h1:Yy0UN8o9Wtr/jGHZDpCBLpNrzcFLLM2yixi/rBrKyJs=
 github.com/caarlos0/env v3.5.0+incompatible/go.mod h1:tdCsowwCzMLdkqRYDlHpZCp2UooDD3MspDBjZ2AD02Y=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
