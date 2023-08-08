@@ -61,6 +61,7 @@ func TestLogin(t *testing.T) {
 
 	_, err = srv.Login(context.Background(), &testUser)
 	require.NoError(t, err)
+	rep.AssertExpectations(t)
 }
 
 func TestRefresh(t *testing.T) {
@@ -81,6 +82,7 @@ func TestRefresh(t *testing.T) {
 
 	_, err = srv.Refresh(context.Background(), tokenPair)
 	require.NoError(t, err)
+	rep.AssertExpectations(t)
 }
 
 func TestDeleteAccount(t *testing.T) {
@@ -91,6 +93,7 @@ func TestDeleteAccount(t *testing.T) {
 		Return(testUser.ID.String(), nil)
 	_, err := srv.DeleteAccount(context.Background(), testUser.ID)
 	require.NoError(t, err)
+	rep.AssertExpectations(t)
 }
 
 func TestTokensIDCompare(t *testing.T) {
@@ -101,6 +104,7 @@ func TestTokensIDCompare(t *testing.T) {
 	id, err := srv.TokensIDCompare(tokenPair)
 	require.NoError(t, err)
 	require.Equal(t, testUser.ID, id)
+	rep.AssertExpectations(t)
 }
 
 func TestGenerateHash(t *testing.T) {
@@ -109,6 +113,7 @@ func TestGenerateHash(t *testing.T) {
 	testBytes := []byte("test")
 	_, err := srv.GenerateHash(testBytes)
 	require.NoError(t, err)
+	rep.AssertExpectations(t)
 }
 
 func TestCheckPasswordHash(t *testing.T) {
@@ -120,6 +125,7 @@ func TestCheckPasswordHash(t *testing.T) {
 	isEqual, err := srv.CheckPasswordHash(hashedBytes, testBytes)
 	require.NoError(t, err)
 	require.True(t, isEqual)
+	rep.AssertExpectations(t)
 }
 
 func TestGenerateTokenPair(t *testing.T) {
@@ -127,6 +133,7 @@ func TestGenerateTokenPair(t *testing.T) {
 	srv := NewUserService(rep, &cfg)
 	_, err := srv.GenerateTokenPair(testUser.ID)
 	require.NoError(t, err)
+	rep.AssertExpectations(t)
 }
 
 func TestGenerateJWTToken(t *testing.T) {
@@ -134,4 +141,5 @@ func TestGenerateJWTToken(t *testing.T) {
 	srv := NewUserService(rep, &cfg)
 	_, err := srv.GenerateJWTToken(accessTokenExpiration, testUser.ID)
 	require.NoError(t, err)
+	rep.AssertExpectations(t)
 }

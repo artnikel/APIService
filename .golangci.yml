@@ -19,7 +19,7 @@ linters-settings:
   gocyclo:
     min-complexity: 15
   goimports:
-    local-prefixes: gitlab.effective-soft.com/yfc/reportservice
+    local-prefixes: github.com/artnikel/APIService
   revive:
     min-confidence: 0.8
   govet:

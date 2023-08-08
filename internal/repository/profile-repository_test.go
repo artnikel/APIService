@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/artnikel/APIService/internal/model"
-	"github.com/artnikel/ProfileService/proto"
-	"github.com/artnikel/ProfileService/proto/mocks"
+	"github.com/artnikel/ProfileService/uproto"
+	"github.com/artnikel/ProfileService/uproto/mocks"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -26,7 +26,7 @@ var (
 func TestSignUp(t *testing.T) {
 	client := new(mocks.UserServiceClient)
 	client.On("SignUp", mock.Anything, mock.Anything).
-		Return(&proto.SignUpResponse{Id: testUser.ID.String()}, nil)
+		Return(&uproto.SignUpResponse{Id: testUser.ID.String()}, nil)
 	rep := NewProfileRepository(client)
 	err := rep.SignUp(context.Background(), &testUser)
 	require.NoError(t, err)
@@ -36,7 +36,7 @@ func TestSignUp(t *testing.T) {
 func TestGetByLogin(t *testing.T) {
 	client := new(mocks.UserServiceClient)
 	client.On("GetByLogin", mock.Anything, mock.Anything).
-		Return(&proto.GetByLoginResponse{Password: string(testUser.Password), Id: testUser.ID.String()}, nil)
+		Return(&uproto.GetByLoginResponse{Password: string(testUser.Password), Id: testUser.ID.String()}, nil)
 	rep := NewProfileRepository(client)
 	password, id, err := rep.GetByLogin(context.Background(), testUser.Login)
 	require.NoError(t, err)
@@ -58,7 +58,7 @@ func TestAddRefreshToken(t *testing.T) {
 func TestGetRefreshTokenByID(t *testing.T) {
 	client := new(mocks.UserServiceClient)
 	client.On("GetRefreshTokenByID", mock.Anything, mock.Anything).
-		Return(&proto.GetRefreshTokenByIDResponse{RefreshToken: testUser.RefreshToken}, nil)
+		Return(&uproto.GetRefreshTokenByIDResponse{RefreshToken: testUser.RefreshToken}, nil)
 	rep := NewProfileRepository(client)
 	refreshToken, err := rep.GetRefreshTokenByID(context.Background(), testUser.ID)
 	require.NoError(t, err)
@@ -69,7 +69,7 @@ func TestGetRefreshTokenByID(t *testing.T) {
 func TestDeleteAccount(t *testing.T) {
 	client := new(mocks.UserServiceClient)
 	client.On("DeleteAccount", mock.Anything, mock.Anything).
-		Return(&proto.DeleteAccountResponse{Id: testUser.ID.String()}, nil)
+		Return(&uproto.DeleteAccountResponse{Id: testUser.ID.String()}, nil)
 	rep := NewProfileRepository(client)
 	id, err := rep.DeleteAccount(context.Background(), testUser.ID)
 	require.Equal(t, id, testUser.ID.String())

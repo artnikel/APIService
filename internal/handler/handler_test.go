@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/artnikel/APIService/internal/handler/mocks"
@@ -33,12 +34,17 @@ var (
 		eyJleHAiOjE2OTE1MzEyMjMsImlkIjoiMjE5NDkxNjctNTRhOC00NjAwLTk1NzMtM2EwYzAyZTE4NzFjIn0.
 		3UGwETfRPcsctV_smpsaq5CQV0MgYACJNHJ91sz9ISk`,
 	}
+	testBalance = model.Balance{
+		BalanceID: uuid.New(),
+		ProfileID: uuid.New(),
+		Operation: 637.81,
+	}
 	v = validator.New()
 )
 
 func TestSignUp(t *testing.T) {
 	srv := new(mocks.UserService)
-	hndl := NewHandler(srv, v)
+	hndl := NewHandler(srv, nil, v)
 
 	jsonData, err := json.Marshal(testUser)
 	require.NoError(t, err)
@@ -58,7 +64,7 @@ func TestSignUp(t *testing.T) {
 
 func TestLogin(t *testing.T) {
 	srv := new(mocks.UserService)
-	hndl := NewHandler(srv, v)
+	hndl := NewHandler(srv, nil, v)
 
 	jsonData, err := json.Marshal(testUser)
 	require.NoError(t, err)
@@ -87,7 +93,7 @@ func TestLogin(t *testing.T) {
 
 func TestRefresh(t *testing.T) {
 	srv := new(mocks.UserService)
-	hndl := NewHandler(srv, v)
+	hndl := NewHandler(srv, nil, v)
 
 	jsonData, err := json.Marshal(tokens)
 	require.NoError(t, err)
@@ -116,7 +122,7 @@ func TestRefresh(t *testing.T) {
 
 func TestDeleteAccount(t *testing.T) {
 	srv := new(mocks.UserService)
-	hndl := NewHandler(srv, v)
+	hndl := NewHandler(srv, nil, v)
 
 	srv.On("DeleteAccount", mock.Anything, mock.AnythingOfType("uuid.UUID")).Return(testUser.ID.String(), nil).Once()
 	e := echo.New()
@@ -131,5 +137,49 @@ func TestDeleteAccount(t *testing.T) {
 	err := hndl.DeleteAccount(c)
 	require.NoError(t, err)
 	require.Contains(t, rec.Body.String(), testUser.ID.String())
+	srv.AssertExpectations(t)
+}
+
+func TestBalanceOperation(t *testing.T) {
+	srv := new(mocks.BalanceService)
+	hndl := NewHandler(nil, srv, v)
+
+	jsonData, err := json.Marshal(testBalance)
+	require.NoError(t, err)
+	srv.On("GetIDByToken", mock.Anything, mock.AnythingOfType("string")).Return(testBalance.ProfileID, nil).Once()
+	srv.On("BalanceOperation", mock.Anything, mock.AnythingOfType("*model.Balance")).Return(testBalance.Operation, nil).Once()
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/deposit", bytes.NewReader(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	strOperation := strconv.FormatFloat(testBalance.Operation, 'f', -1, 64)
+	err = hndl.BalanceOperation(c)
+	require.NoError(t, err)
+	require.Contains(t, rec.Body.String(), strOperation)
+	srv.AssertExpectations(t)
+}
+
+func TestGetBalance(t *testing.T){
+	srv := new(mocks.BalanceService)
+	hndl := NewHandler(nil, srv, v)
+
+	jsonData, err := json.Marshal(testBalance.ProfileID)
+	require.NoError(t, err)
+	srv.On("GetIDByToken", mock.Anything, mock.AnythingOfType("string")).Return(testBalance.ProfileID, nil).Once()
+	srv.On("GetBalance", mock.Anything, mock.AnythingOfType("uuid.UUID")).Return(testBalance.Operation, nil).Once()
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/getbalance", bytes.NewReader(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	strOperation := strconv.FormatFloat(testBalance.Operation, 'f', -1, 64)
+	err = hndl.GetBalance(c)
+	require.NoError(t, err)
+	require.Contains(t, rec.Body.String(), strOperation)
 	srv.AssertExpectations(t)
 }

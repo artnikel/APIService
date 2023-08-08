@@ -3,6 +3,8 @@ package handler
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"net/http"
 
 	"github.com/artnikel/APIService/internal/model"
@@ -20,17 +22,25 @@ type UserService interface {
 	DeleteAccount(ctx context.Context, id uuid.UUID) (string, error)
 }
 
+type BalanceService interface {
+	BalanceOperation(ctx context.Context, balance *model.Balance) (float64, error)
+	GetBalance(ctx context.Context, profileid uuid.UUID) (float64, error)
+	GetIDByToken(authHeader string) (uuid.UUID, error)
+}
+
 // Handler is responsible for handling HTTP requests related to entities.
 type Handler struct {
-	userService UserService
-	validate    *validator.Validate
+	userService    UserService
+	balanceService BalanceService
+	validate       *validator.Validate
 }
 
 // NewHandler creates a new instance of the Handler struct.
-func NewHandler(userService UserService, v *validator.Validate) *Handler {
+func NewHandler(userService UserService, balanceService BalanceService, v *validator.Validate) *Handler {
 	return &Handler{
-		userService: userService,
-		validate:    v,
+		userService:    userService,
+		balanceService: balanceService,
+		validate:       v,
 	}
 }
 
@@ -162,4 +172,70 @@ func (h *Handler) DeleteAccount(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to delete")
 	}
 	return c.JSON(http.StatusOK, str)
+}
+
+// BalanceOperation calls method of Service by handler
+func (h *Handler) BalanceOperation(c echo.Context) error {
+	var (
+		operation   float64
+		requestData = model.Balance{
+			Operation: operation,
+		}
+		operationType = "Deposit"
+		output        = func(money float64) string {
+			return fmt.Sprintf("%s of %.2f successfully made.", operationType, math.Abs(money))
+		}
+	)
+	err := c.Bind(&requestData)
+	if err != nil {
+		logrus.Errorf("error: %v", err)
+		return c.JSON(http.StatusBadRequest, "Handler-BalanceOperation: invalid request payload")
+	}
+	err = h.validate.VarCtx(c.Request().Context(), requestData.Operation, "required,gt=0")
+	if err != nil {
+		logrus.Errorf("error: %v", err)
+		return c.JSON(http.StatusBadRequest, "Handler-BalanceOperation: failed to validate operation")
+	}
+	authHeader := c.Request().Header.Get("Authorization")
+	profileid, err := h.balanceService.GetIDByToken(authHeader)
+	if err != nil {
+		logrus.Errorf("error: %v", err)
+		return c.JSON(http.StatusBadRequest, "Handler-BalanceOperation-GetIDByToken: failed to get ID by token")
+	}
+	balance := model.Balance{
+		ProfileID: profileid,
+		Operation: requestData.Operation,
+	}
+	if c.Request().RequestURI == "/withdraw" {
+		balance.Operation = -balance.Operation
+		operationType = "Withdraw"
+	}
+	money, err := h.balanceService.BalanceOperation(c.Request().Context(), &balance)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"BalanceId": balance.BalanceID,
+			"ProfileId": balance.ProfileID,
+			"Operation": balance.Operation,
+		}).Errorf("Handler-BalanceOperation: error: %v", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Handler-BalanceOperation: failed to made balance operation")
+	}
+	return c.JSON(http.StatusOK, output(money))
+}
+
+// GetBalance calls method of Service by handler
+func (h *Handler) GetBalance(c echo.Context) error {
+	authHeader := c.Request().Header.Get("Authorization")
+	profileid, err := h.balanceService.GetIDByToken(authHeader)
+	if err != nil {
+		logrus.Errorf("error: %v", err)
+		return c.JSON(http.StatusBadRequest, "Handler-GetBalance-GetIDByToken: failed to get ID by token")
+	}
+	money, err := h.balanceService.GetBalance(c.Request().Context(), profileid)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"ProfileId": profileid,
+		}).Errorf("Handler-GetBalance: error: %v", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get balance")
+	}
+	return c.JSON(http.StatusOK, fmt.Sprintf("Balance: %f", money))
 }
