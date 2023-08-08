@@ -127,7 +127,7 @@ func TestDeleteAccount(t *testing.T) {
 	srv.On("DeleteAccount", mock.Anything, mock.AnythingOfType("uuid.UUID")).Return(testUser.ID.String(), nil).Once()
 	e := echo.New()
 
-	req := httptest.NewRequest(http.MethodDelete, "/delete/:id", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/delete/:id", http.NoBody)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
@@ -162,7 +162,7 @@ func TestBalanceOperation(t *testing.T) {
 	srv.AssertExpectations(t)
 }
 
-func TestGetBalance(t *testing.T){
+func TestGetBalance(t *testing.T) {
 	srv := new(mocks.BalanceService)
 	hndl := NewHandler(nil, srv, v)
 

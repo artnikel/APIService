@@ -32,7 +32,7 @@ func TestBalanceOperation(t *testing.T) {
 	client.AssertExpectations(t)
 }
 
-func TestGetBalance(t *testing.T){
+func TestGetBalance(t *testing.T) {
 	client := new(mocks.BalanceServiceClient)
 	client.On("GetBalance", mock.Anything, mock.Anything).
 		Return(&bproto.GetBalanceResponse{Money: testBalance.Operation}, nil)

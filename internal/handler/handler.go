@@ -22,6 +22,7 @@ type UserService interface {
 	DeleteAccount(ctx context.Context, id uuid.UUID) (string, error)
 }
 
+// BalanceService is an interface that defines the methods on Balance entity.
 type BalanceService interface {
 	BalanceOperation(ctx context.Context, balance *model.Balance) (float64, error)
 	GetBalance(ctx context.Context, profileid uuid.UUID) (float64, error)

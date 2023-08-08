@@ -163,11 +163,11 @@ func (us *UserService) TokensIDCompare(tokenPair *model.TokenPair) (uuid.UUID, e
 	return accessID, nil
 }
 
-// HashPassword is a method that makes from bytes hashed value
+// GenerateHash is a method that makes from bytes hashed value
 func (us *UserService) GenerateHash(password []byte) ([]byte, error) {
 	bytes, err := bcrypt.GenerateFromPassword(password, bcryptCost)
 	if err != nil {
-		return bytes, fmt.Errorf("UserService-HashPassword: error in method GenerateFromPassword: %w", err)
+		return bytes, fmt.Errorf("UserService-GenerateHash: error in method GenerateFromPassword: %w", err)
 	}
 	return bytes, nil
 }

@@ -68,7 +68,7 @@ func (bs *BalanceService) GetIDByToken(authHeader string) (uuid.UUID, error) {
 	}
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
 		if id, ok := claims["id"].(string); ok {
-			profileid,err := uuid.Parse(id)
+			profileid, err := uuid.Parse(id)
 			if err != nil {
 				return uuid.Nil, fmt.Errorf("BalanceService-GetIDByToken: failed to parse")
 			}

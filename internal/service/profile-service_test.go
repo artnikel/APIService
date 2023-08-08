@@ -19,9 +19,9 @@ import (
 
 var (
 	testUser = model.User{
-		ID:           uuid.New(),
-		Login:        "testLogin",
-		Password:     []byte("testPassword"),
+		ID:       uuid.New(),
+		Login:    "testLogin",
+		Password: []byte("testPassword"),
 		RefreshToken: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.
 		eyJleHAiOjE2OTE1MzE2NzAsImlkIjoiMjE5NDkxNjctNTRhOC00NjAwLTk1NzMtM2EwYzAyZTE4NzFjIn0.
 		RI9lxDrDlj0RS3FAtNSdwFGz14v9NX1tOxmLjSpZ2dU`,

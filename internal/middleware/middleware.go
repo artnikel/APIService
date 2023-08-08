@@ -1,3 +1,4 @@
+// Package middleware provides common middleware functions for request handling.
 package middleware
 
 import (

@@ -19,7 +19,7 @@ linters-settings:
   gocyclo:
     min-complexity: 15
   goimports:
-    local-prefixes: github.com/artnikel
+    local-prefixes: gitlab.effective-soft.com/yfc/reportservice
   revive:
     min-confidence: 0.8
   govet:
@@ -77,7 +77,6 @@ run:
     - vendor
     - e2e
     - test
-
 
 issues:
   max-same-issues: 0

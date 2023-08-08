@@ -45,5 +45,5 @@ func (b *BalanceRepository) GetBalance(ctx context.Context, profileid uuid.UUID)
 	if err != nil {
 		return 0, fmt.Errorf("BalanceRepository-GetBalance: error:%w", err)
 	}
-	return resp.Money,nil
+	return resp.Money, nil
 }
