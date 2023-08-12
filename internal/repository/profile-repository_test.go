@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/artnikel/APIService/internal/model"
-	"github.com/artnikel/ProfileService/uproto"
-	"github.com/artnikel/ProfileService/uproto/mocks"
+	uproto "github.com/artnikel/ProfileService/proto"
+	"github.com/artnikel/ProfileService/proto/mocks"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

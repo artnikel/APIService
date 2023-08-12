@@ -44,7 +44,7 @@ var (
 
 func TestSignUp(t *testing.T) {
 	srv := new(mocks.UserService)
-	hndl := NewHandler(srv, nil, v)
+	hndl := NewHandler(srv, nil, nil, v)
 
 	jsonData, err := json.Marshal(testUser)
 	require.NoError(t, err)
@@ -64,7 +64,7 @@ func TestSignUp(t *testing.T) {
 
 func TestLogin(t *testing.T) {
 	srv := new(mocks.UserService)
-	hndl := NewHandler(srv, nil, v)
+	hndl := NewHandler(srv, nil, nil, v)
 
 	jsonData, err := json.Marshal(testUser)
 	require.NoError(t, err)
@@ -93,7 +93,7 @@ func TestLogin(t *testing.T) {
 
 func TestRefresh(t *testing.T) {
 	srv := new(mocks.UserService)
-	hndl := NewHandler(srv, nil, v)
+	hndl := NewHandler(srv, nil, nil, v)
 
 	jsonData, err := json.Marshal(tokens)
 	require.NoError(t, err)
@@ -122,7 +122,7 @@ func TestRefresh(t *testing.T) {
 
 func TestDeleteAccount(t *testing.T) {
 	srv := new(mocks.UserService)
-	hndl := NewHandler(srv, nil, v)
+	hndl := NewHandler(srv, nil, nil, v)
 
 	srv.On("DeleteAccount", mock.Anything, mock.AnythingOfType("uuid.UUID")).Return(testUser.ID.String(), nil).Once()
 	e := echo.New()
@@ -142,7 +142,7 @@ func TestDeleteAccount(t *testing.T) {
 
 func TestBalanceOperation(t *testing.T) {
 	srv := new(mocks.BalanceService)
-	hndl := NewHandler(nil, srv, v)
+	hndl := NewHandler(nil, srv, nil, v)
 
 	jsonData, err := json.Marshal(testBalance)
 	require.NoError(t, err)
@@ -164,7 +164,7 @@ func TestBalanceOperation(t *testing.T) {
 
 func TestGetBalance(t *testing.T) {
 	srv := new(mocks.BalanceService)
-	hndl := NewHandler(nil, srv, v)
+	hndl := NewHandler(nil, srv, nil, v)
 
 	jsonData, err := json.Marshal(testBalance.ProfileID)
 	require.NoError(t, err)

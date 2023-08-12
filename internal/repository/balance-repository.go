@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/artnikel/APIService/internal/model"
-	"github.com/artnikel/BalanceService/bproto"
+	bproto "github.com/artnikel/BalanceService/proto"
 	"github.com/google/uuid"
 )
 
@@ -15,7 +15,7 @@ type BalanceRepository struct {
 	client bproto.BalanceServiceClient
 }
 
-// NewBalanceRepository creates and returns a new instance of BalanceRepository, using the provided proto.UserServiceClient.
+// NewBalanceRepository creates and returns a new instance of BalanceRepository, using the provided proto.BalanceServiceClient.
 func NewBalanceRepository(client bproto.BalanceServiceClient) *BalanceRepository {
 	return &BalanceRepository{
 		client: client,

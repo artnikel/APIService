@@ -9,13 +9,13 @@ import (
 	custommiddleware "github.com/artnikel/APIService/internal/middleware"
 	"github.com/artnikel/APIService/internal/repository"
 	"github.com/artnikel/APIService/internal/service"
-	"github.com/artnikel/BalanceService/bproto"
-	"github.com/artnikel/ProfileService/uproto"
+	bproto "github.com/artnikel/BalanceService/proto"
+	uproto "github.com/artnikel/ProfileService/proto"
+	tproto "github.com/artnikel/TradingService/proto"
 	"github.com/caarlos0/env"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -28,29 +28,40 @@ func main() {
 	v := validator.New()
 	uconn, err := grpc.Dial("localhost:8090", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		logrus.Fatalf("could not connect: %v", err)
+		log.Fatalf("could not connect: %v", err)
 	}
 	bconn, err := grpc.Dial("localhost:8095", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		logrus.Fatalf("could not connect: %v", err)
+		log.Fatalf("could not connect: %v", err)
+	}
+	tconn, err := grpc.Dial("localhost:8099", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("could not connect: %v", err)
 	}
 	defer func() {
 		errConnClose := uconn.Close()
 		if err != nil {
-			logrus.Fatalf("could not close connection: %v", errConnClose)
+			log.Fatalf("could not close connection: %v", errConnClose)
 		}
 		errConnClose = bconn.Close()
 		if err != nil {
-			logrus.Fatalf("could not close connection: %v", errConnClose)
+			log.Fatalf("could not close connection: %v", errConnClose)
+		}
+		errConnClose = tconn.Close()
+		if err != nil {
+			log.Fatalf("could not close connection: %v", errConnClose)
 		}
 	}()
 	uclient := uproto.NewUserServiceClient(uconn)
 	bclient := bproto.NewBalanceServiceClient(bconn)
+	tclient := tproto.NewTradingServiceClient(tconn)
 	urep := repository.NewProfileRepository(uclient)
 	brep := repository.NewBalanceRepository(bclient)
+	trep := repository.NewTradingRepository(tclient)
 	usrv := service.NewUserService(urep, &cfg)
 	bsrv := service.NewBalanceService(brep)
-	hndl := handler.NewHandler(usrv, bsrv, v)
+	tsrv := service.NewTradingService(trep)
+	hndl := handler.NewHandler(usrv, bsrv, tsrv,v)
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
@@ -61,5 +72,7 @@ func main() {
 	e.POST("/deposit", hndl.BalanceOperation, custommiddleware.JWTMiddleware)
 	e.POST("/withdraw", hndl.BalanceOperation, custommiddleware.JWTMiddleware)
 	e.GET("/getbalance", hndl.GetBalance, custommiddleware.JWTMiddleware)
+	e.POST("/long",hndl.Strategies,custommiddleware.JWTMiddleware)
+	e.POST("/short",hndl.Strategies,custommiddleware.JWTMiddleware)
 	e.Logger.Fatal(e.Start(":7777"))
 }

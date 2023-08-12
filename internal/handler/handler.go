@@ -11,6 +11,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 )
 
@@ -29,24 +30,31 @@ type BalanceService interface {
 	GetIDByToken(authHeader string) (uuid.UUID, error)
 }
 
+// TradingService is an interface that defines the method on Trading entity.
+type TradingService interface {
+	Strategies(ctx context.Context, strategy string, deal *model.Deal) (float64, error)
+}
+
 // Handler is responsible for handling HTTP requests related to entities.
 type Handler struct {
 	userService    UserService
 	balanceService BalanceService
+	tradingService TradingService
 	validate       *validator.Validate
 }
 
 // NewHandler creates a new instance of the Handler struct.
-func NewHandler(userService UserService, balanceService BalanceService, v *validator.Validate) *Handler {
+func NewHandler(userService UserService, balanceService BalanceService, tradingService TradingService, v *validator.Validate) *Handler {
 	return &Handler{
 		userService:    userService,
 		balanceService: balanceService,
+		tradingService: tradingService,
 		validate:       v,
 	}
 }
 
-// InputData is a struct for binding login and password.
-type InputData struct {
+// inputData is a struct for binding login and password.
+type inputData struct {
 	Login    string `json:"login" form:"login"`
 	Password string `json:"password" form:"password"`
 }
@@ -54,7 +62,7 @@ type InputData struct {
 // SignUp calls method of Service by handler
 func (h *Handler) SignUp(c echo.Context) error {
 	var newUser model.User
-	requestData := &InputData{}
+	requestData := &inputData{}
 	err := c.Bind(requestData)
 	if err != nil {
 		logrus.Errorf("error: %v", err)
@@ -82,7 +90,7 @@ func (h *Handler) SignUp(c echo.Context) error {
 
 // Login calls method of Service by handler
 func (h *Handler) Login(c echo.Context) error {
-	var requestData InputData
+	var requestData inputData
 	err := c.Bind(&requestData)
 	if err != nil {
 		logrus.Errorf("error: %v", err)
@@ -239,4 +247,54 @@ func (h *Handler) GetBalance(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get balance")
 	}
 	return c.JSON(http.StatusOK, fmt.Sprintf("Balance: %f", money))
+}
+
+// inputData is a struct for binding new deal.
+type dealData struct {
+	ActionsCount float64 `json:"actionscount" form:"actionscount" validate:"required"`
+	Company      string  `json:"company" form:"company" validate:"required"`
+	StopLoss     float64 `json:"stoploss" form:"stoploss" validate:"required"`
+	TakeProfit   float64 `json:"takeprofit" form:"takeprofit" validate:"required"`
+}
+
+// Strategies calls method of Service by handler
+func (h *Handler) Strategies(c echo.Context) error {
+	var strategy string
+	if c.Request().RequestURI == "/long" {
+		strategy = "long"
+	} else if c.Request().RequestURI == "/short" {
+		strategy = "short"
+	} else {
+		return c.JSON(http.StatusMethodNotAllowed, "Unknown strategy")
+	}
+	authHeader := c.Request().Header.Get("Authorization")
+	profileid, err := h.balanceService.GetIDByToken(authHeader)
+	if err != nil {
+		logrus.Errorf("error: %v", err)
+		return c.JSON(http.StatusBadRequest, "Handler-Strategies-GetIDByToken: failed to get ID by token")
+	}
+	var requestData dealData
+	err = c.Bind(&requestData)
+	if err != nil {
+		logrus.Errorf("error: %v", err)
+		return c.JSON(http.StatusBadRequest, "Handler-Strategies: invalid request payload")
+	}
+	deal := &model.Deal{
+		ProfileID:    profileid,
+		SharesCount: decimal.NewFromFloat(requestData.ActionsCount),
+		Company:      requestData.Company,
+		StopLoss:     decimal.NewFromFloat(requestData.StopLoss),
+		TakeProfit:   decimal.NewFromFloat(requestData.TakeProfit),
+	}
+	err = h.validate.StructCtx(c.Request().Context(), requestData)
+	if err != nil {
+		logrus.Errorf("error: %v", err)
+		return c.JSON(http.StatusBadRequest, "Handler-BalanceOperation: failed to validate operation")
+	}
+	profit, err := h.tradingService.Strategies(c.Request().Context(), strategy, deal)
+	if err != nil {
+		logrus.Errorf("error: %v", err)
+		return c.JSON(http.StatusBadRequest, "Handler-Strategies: failed to run strategies")
+	}
+	return c.JSON(http.StatusOK, fmt.Sprintf("Profit: %f", profit))
 }

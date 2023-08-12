@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/artnikel/APIService/internal/model"
-	uproto "github.com/artnikel/ProfileService/uproto"
+	uproto "github.com/artnikel/ProfileService/proto"
 	"github.com/google/uuid"
 )
 
