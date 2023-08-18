@@ -6,6 +6,8 @@ import (
 
 	"github.com/artnikel/APIService/internal/model"
 	tproto "github.com/artnikel/TradingService/proto"
+	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -21,9 +23,9 @@ func NewTradingRepository(client tproto.TradingServiceClient) *TradingRepository
 	}
 }
 
-// Strategies call a method of TradingService.
-func (r *TradingRepository) Strategies(ctx context.Context, strategy string, deal *model.Deal) (float64, error) {
-	resp, err := r.client.Strategies(ctx, &tproto.StrategiesRequest{
+// GetProfit call a method of TradingService.
+func (r *TradingRepository) GetProfit(ctx context.Context, strategy string, deal *model.Deal) (float64, error) {
+	resp, err := r.client.GetProfit(ctx, &tproto.GetProfitRequest{
 		Strategy: strategy,
 		Deal: &tproto.Deal{
 			DealID:        deal.DealID.String(),
@@ -39,7 +41,45 @@ func (r *TradingRepository) Strategies(ctx context.Context, strategy string, dea
 		},
 	})
 	if err != nil {
-		return 0, fmt.Errorf("TradingRepository-Strategies: error:%w", err)
+		return 0, fmt.Errorf("TradingRepository-GetProfit: error:%w", err)
 	}
 	return resp.Profit, nil
+}
+
+func (r *TradingRepository) ClosePosition(ctx context.Context, dealid ,profileid uuid.UUID) error {
+	_, err := r.client.ClosePosition(ctx, &tproto.ClosePositionRequest{
+		Dealid: dealid.String(),
+		Profileid: profileid.String(),
+	})
+	if err != nil {
+		return fmt.Errorf("TradingRepository-ClosePosition: error:%w", err)
+	}
+	return nil
+}
+
+func (r *TradingRepository) GetUnclosedPositions(ctx context.Context, profileid uuid.UUID) ([]*model.Deal, error) {
+	resp, err := r.client.GetUnclosedPositions(ctx, &tproto.GetUnclosedPositionsRequest{
+		Profileid: profileid.String(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("TradingRepository-GetUncosedPositions: error:%w", err)
+	}
+	unclosedDeals := make([]*model.Deal, len(resp.Deal))
+	for i, deal := range resp.Deal {
+		dealUUID, err := uuid.Parse(deal.DealID)
+		if err != nil {
+			return nil, fmt.Errorf("TradingRepository-GetUncosedPositions: error:%w", err)
+		}
+		unclosedDeal := &model.Deal{
+			DealID:        dealUUID,
+			SharesCount:   decimal.NewFromFloat(deal.SharesCount),
+			Company:       deal.Company,
+			PurchasePrice: decimal.NewFromFloat(deal.PurchasePrice),
+			StopLoss:      decimal.NewFromFloat(deal.StopLoss),
+			TakeProfit:    decimal.NewFromFloat(deal.TakeProfit),
+			DealTime:      deal.DealTime.AsTime(),
+		}
+		unclosedDeals[i] = unclosedDeal
+	}
+	return unclosedDeals, nil
 }

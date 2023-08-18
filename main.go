@@ -2,8 +2,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
+	_ "github.com/artnikel/APIService/docs"
 	"github.com/artnikel/APIService/internal/config"
 	"github.com/artnikel/APIService/internal/handler"
 	custommiddleware "github.com/artnikel/APIService/internal/middleware"
@@ -16,9 +18,21 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+// @title Trade API
+// @version 1.0
+// @description Trading System with 2 strategies (Long and Short).
+
+// @host localhost:7777
+// @BasePath /
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
 
 func main() {
 	var cfg config.Variables
@@ -34,7 +48,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not connect: %v", err)
 	}
-	tconn, err := grpc.Dial("localhost:8099", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	tconn, err := grpc.Dial("localhost:8088", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("could not connect: %v", err)
 	}
@@ -61,18 +75,23 @@ func main() {
 	usrv := service.NewUserService(urep, &cfg)
 	bsrv := service.NewBalanceService(brep)
 	tsrv := service.NewTradingService(trep)
-	hndl := handler.NewHandler(usrv, bsrv, tsrv,v)
+	hndl := handler.NewHandler(usrv, bsrv, tsrv, v)
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.POST("/signup", hndl.SignUp)
 	e.POST("/login", hndl.Login)
 	e.POST("/refresh", hndl.Refresh)
-	e.DELETE("/delete/:id", hndl.DeleteAccount)
-	e.POST("/deposit", hndl.BalanceOperation, custommiddleware.JWTMiddleware)
-	e.POST("/withdraw", hndl.BalanceOperation, custommiddleware.JWTMiddleware)
+	e.DELETE("/delete", hndl.DeleteAccount, custommiddleware.JWTMiddleware)
+	e.POST("/deposit", hndl.Deposit, custommiddleware.JWTMiddleware)
+	e.POST("/withdraw", hndl.Withdraw, custommiddleware.JWTMiddleware)
 	e.GET("/getbalance", hndl.GetBalance, custommiddleware.JWTMiddleware)
-	e.POST("/long",hndl.Strategies,custommiddleware.JWTMiddleware)
-	e.POST("/short",hndl.Strategies,custommiddleware.JWTMiddleware)
-	e.Logger.Fatal(e.Start(":7777"))
+	e.POST("/long", hndl.Long, custommiddleware.JWTMiddleware)
+	e.POST("/short", hndl.Short, custommiddleware.JWTMiddleware)
+	e.POST("/closeposition", hndl.ClosePosition, custommiddleware.JWTMiddleware)
+	e.GET("/getunclosed", hndl.GetUnclosedPositions, custommiddleware.JWTMiddleware)
+
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
+	address := fmt.Sprintf(":%d", cfg.TradingApiPort)
+	e.Logger.Fatal(e.Start(address))
 }

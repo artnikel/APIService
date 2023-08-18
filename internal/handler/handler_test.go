@@ -13,6 +13,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -38,6 +39,12 @@ var (
 		BalanceID: uuid.New(),
 		ProfileID: uuid.New(),
 		Operation: 637.81,
+	}
+	testDeal = model.Deal{
+		SharesCount: decimal.NewFromFloat(1.5),
+		Company:     "Apple",
+		StopLoss:    decimal.NewFromFloat(180.5),
+		TakeProfit:  decimal.NewFromFloat(500.5),
 	}
 	v = validator.New()
 )
@@ -140,7 +147,7 @@ func TestDeleteAccount(t *testing.T) {
 	srv.AssertExpectations(t)
 }
 
-func TestBalanceOperation(t *testing.T) {
+func TestDeposit(t *testing.T) {
 	srv := new(mocks.BalanceService)
 	hndl := NewHandler(nil, srv, nil, v)
 
@@ -156,7 +163,29 @@ func TestBalanceOperation(t *testing.T) {
 	c := e.NewContext(req, rec)
 
 	strOperation := strconv.FormatFloat(testBalance.Operation, 'f', -1, 64)
-	err = hndl.BalanceOperation(c)
+	err = hndl.Deposit(c)
+	require.NoError(t, err)
+	require.Contains(t, rec.Body.String(), strOperation)
+	srv.AssertExpectations(t)
+}
+
+func TestWithdraw(t *testing.T) {
+	srv := new(mocks.BalanceService)
+	hndl := NewHandler(nil, srv, nil, v)
+
+	jsonData, err := json.Marshal(testBalance)
+	require.NoError(t, err)
+	srv.On("GetIDByToken", mock.Anything, mock.AnythingOfType("string")).Return(testBalance.ProfileID, nil).Once()
+	srv.On("BalanceOperation", mock.Anything, mock.AnythingOfType("*model.Balance")).Return(testBalance.Operation, nil).Once()
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/withdraw", bytes.NewReader(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	strOperation := strconv.FormatFloat(testBalance.Operation, 'f', -1, 64)
+	err = hndl.Withdraw(c)
 	require.NoError(t, err)
 	require.Contains(t, rec.Body.String(), strOperation)
 	srv.AssertExpectations(t)
@@ -182,4 +211,40 @@ func TestGetBalance(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, rec.Body.String(), strOperation)
 	srv.AssertExpectations(t)
+}
+
+func TestLong(t *testing.T) {
+	srv := new(mocks.BalanceService)
+	hndl := NewHandler(nil, srv, nil, v)
+	jsonData, err := json.Marshal(testDeal)
+	require.NoError(t, err)
+	srv.On("GetIDByToken", mock.Anything, mock.AnythingOfType("string")).Return(testBalance.ProfileID, nil).Once()
+	srv.On("Strategies", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("*model.Deal")).Return(testDeal.Profit.InexactFloat64(), nil).Once()
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/long", bytes.NewReader(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err = hndl.Long(c)
+	require.NoError(t, err)
+}
+
+func TestShort(t *testing.T) {
+	srv := new(mocks.BalanceService)
+	hndl := NewHandler(nil, srv, nil, v)
+	jsonData, err := json.Marshal(testDeal)
+	require.NoError(t, err)
+	srv.On("GetIDByToken", mock.Anything, mock.AnythingOfType("string")).Return(testBalance.ProfileID, nil).Once()
+	srv.On("Strategies", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("*model.Deal")).Return(testDeal.Profit.InexactFloat64(), nil).Once()
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/short", bytes.NewReader(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err = hndl.Short(c)
+	require.NoError(t, err)
 }

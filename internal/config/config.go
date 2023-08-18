@@ -4,4 +4,5 @@ package config
 // Variables is a struct with environment variables
 type Variables struct {
 	TokenSignature string `env:"TOKEN_SIGNATURE"`
+	TradingApiPort int    `env:"TRADING_API_PORT" `
 }
