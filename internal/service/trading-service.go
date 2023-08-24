@@ -11,8 +11,9 @@ import (
 // TradingRepository is an interface that contains methods for long or short strategies
 type TradingRepository interface {
 	GetProfit(ctx context.Context, strategy string, deal *model.Deal) (float64, error)
-	ClosePosition(ctx context.Context, dealid, profileid uuid.UUID) error
+	ClosePosition(ctx context.Context, dealid, profileid uuid.UUID) (float64, error)
 	GetUnclosedPositions(ctx context.Context, profileid uuid.UUID) ([]*model.Deal, error)
+	GetPrices(ctx context.Context) ([]model.Share, error)
 }
 
 // TradingService contains BalanceRepository interface
@@ -34,12 +35,12 @@ func (ts *TradingService) GetProfit(ctx context.Context, strategy string, deal *
 	return profit, nil
 }
 
-func (ts *TradingService) ClosePosition(ctx context.Context, dealid, profileid uuid.UUID) error {
-	err := ts.tRep.ClosePosition(ctx, dealid,profileid)
+func (ts *TradingService) ClosePosition(ctx context.Context, dealid, profileid uuid.UUID) (float64, error) {
+	profit, err := ts.tRep.ClosePosition(ctx, dealid, profileid)
 	if err != nil {
-		return fmt.Errorf("TradingService-ClosePosition: error:%w", err)
+		return 0, fmt.Errorf("TradingService-ClosePosition: error:%w", err)
 	}
-	return nil
+	return profit, nil
 }
 
 func (ts *TradingService) GetUnclosedPositions(ctx context.Context, profileid uuid.UUID) ([]*model.Deal, error) {
@@ -48,4 +49,12 @@ func (ts *TradingService) GetUnclosedPositions(ctx context.Context, profileid uu
 		return nil, fmt.Errorf("TradingService-GetUnclosedPositions: error:%w", err)
 	}
 	return unclosedDeals, nil
+}
+
+func (ts *TradingService) GetPrices(ctx context.Context) ([]model.Share, error) {
+	shares, err := ts.tRep.GetPrices(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("TradingService-GetPrices: error:%w", err)
+	}
+	return shares, nil
 }

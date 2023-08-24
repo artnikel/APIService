@@ -174,6 +174,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/getprices": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Show prices of shares",
+                "operationId": "get-prices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Share"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/getunclosed": {
             "get": {
                 "security": [
@@ -393,7 +422,7 @@ const docTemplate = `{
                 "operationId": "create-account",
                 "parameters": [
                     {
-                        "description": "Please fill the login and password fields.",
+                        "description": "Please fill the login (5-20 symbols) and password (minimum 8 symbols) fields.",
                         "name": "input",
                         "in": "body",
                         "required": true,
@@ -533,6 +562,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "company": {
+                    "description": "name of company in share",
                     "type": "string"
                 },
                 "dealid": {
@@ -540,9 +570,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "dealtime": {
+                    "description": "entry time in position",
                     "type": "string"
                 },
                 "purchaseprice": {
+                    "description": "entry price in position",
                     "type": "number"
                 },
                 "sharescount": {
@@ -550,9 +582,22 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "stoploss": {
+                    "description": "lower limit where the price can go",
                     "type": "number"
                 },
                 "takeprofit": {
+                    "description": "upper limit where the price can go",
+                    "type": "number"
+                }
+            }
+        },
+        "model.Share": {
+            "type": "object",
+            "properties": {
+                "company": {
+                    "type": "string"
+                },
+                "price": {
                     "type": "number"
                 }
             }
@@ -561,9 +606,11 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "accesstoken": {
+                    "description": "token that gives access to secure methods",
                     "type": "string"
                 },
                 "refreshtoken": {
+                    "description": "same token as in struct User",
                     "type": "string"
                 }
             }

@@ -14,7 +14,6 @@ import (
 	bproto "github.com/artnikel/BalanceService/proto"
 	uproto "github.com/artnikel/ProfileService/proto"
 	tproto "github.com/artnikel/TradingService/proto"
-	"github.com/caarlos0/env"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -35,35 +34,35 @@ import (
 // @name Authorization
 
 func main() {
-	var cfg config.Variables
-	if err := env.Parse(&cfg); err != nil {
-		log.Fatal("could not parse config: ", err)
+	cfg, err := config.New()
+	if err != nil {
+		log.Fatal("Could not parse config: ", err)
 	}
 	v := validator.New()
 	uconn, err := grpc.Dial("localhost:8090", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("could not connect: %v", err)
+		log.Fatalf("Could not connect: %v", err)
 	}
 	bconn, err := grpc.Dial("localhost:8095", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("could not connect: %v", err)
+		log.Fatalf("Could not connect: %v", err)
 	}
 	tconn, err := grpc.Dial("localhost:8088", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("could not connect: %v", err)
+		log.Fatalf("Could not connect: %v", err)
 	}
 	defer func() {
 		errConnClose := uconn.Close()
 		if err != nil {
-			log.Fatalf("could not close connection: %v", errConnClose)
+			log.Fatalf("v not close connection: %v", errConnClose)
 		}
 		errConnClose = bconn.Close()
 		if err != nil {
-			log.Fatalf("could not close connection: %v", errConnClose)
+			log.Fatalf("Could not close connection: %v", errConnClose)
 		}
 		errConnClose = tconn.Close()
 		if err != nil {
-			log.Fatalf("could not close connection: %v", errConnClose)
+			log.Fatalf("Could not close connection: %v", errConnClose)
 		}
 	}()
 	uclient := uproto.NewUserServiceClient(uconn)
@@ -72,7 +71,7 @@ func main() {
 	urep := repository.NewProfileRepository(uclient)
 	brep := repository.NewBalanceRepository(bclient)
 	trep := repository.NewTradingRepository(tclient)
-	usrv := service.NewUserService(urep, &cfg)
+	usrv := service.NewUserService(urep)
 	bsrv := service.NewBalanceService(brep)
 	tsrv := service.NewTradingService(trep)
 	hndl := handler.NewHandler(usrv, bsrv, tsrv, v)
@@ -90,6 +89,7 @@ func main() {
 	e.POST("/short", hndl.Short, custommiddleware.JWTMiddleware)
 	e.POST("/closeposition", hndl.ClosePosition, custommiddleware.JWTMiddleware)
 	e.GET("/getunclosed", hndl.GetUnclosedPositions, custommiddleware.JWTMiddleware)
+	e.GET("/getprices", hndl.GetPrices)
 
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 	address := fmt.Sprintf(":%d", cfg.TradingApiPort)

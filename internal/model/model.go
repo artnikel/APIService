@@ -16,6 +16,12 @@ type User struct {
 	RefreshToken string    `json:"-"`                                      // token that storing the session in the database
 }
 
+// Share is a struct for shares entity
+type Share struct {
+	Company string  `json:"company"`
+	Price   float64 `json:"price"`
+}
+
 // TokenPair contains two tokens for authorization of user
 type TokenPair struct {
 	AccessToken  string `json:"accesstoken" form:"accesstoken"`   // token that gives access to secure methods

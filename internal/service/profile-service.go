@@ -26,12 +26,11 @@ type UserRepository interface {
 // UserService contains UserRepository interface
 type UserService struct {
 	uRep UserRepository
-	cfg  *config.Variables
 }
 
 // NewUserService accepts UserRepository object and returnes an object of type *UserService
-func NewUserService(uRep UserRepository, cfg *config.Variables) *UserService {
-	return &UserService{uRep: uRep, cfg: cfg}
+func NewUserService(uRep UserRepository) *UserService {
+	return &UserService{uRep: uRep}
 }
 
 // Expiration time for an access and a refresh tokens
@@ -128,7 +127,11 @@ func (us *UserService) DeleteAccount(ctx context.Context, id uuid.UUID) (string,
 
 // TokensIDCompare compares IDs from refresh and access token for being equal
 func (us *UserService) TokensIDCompare(tokenPair *model.TokenPair) (uuid.UUID, error) {
-	accessToken, err := us.ValidateToken(tokenPair.AccessToken, us.cfg.TokenSignature)
+	cfg, err := config.New()
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("could not parse config: %w", err)
+	}
+	accessToken, err := us.ValidateToken(tokenPair.AccessToken, cfg.TokenSignature)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("UserService-TokensIDCompare-ValidateToken: error: %w", err)
 	}
@@ -141,7 +144,7 @@ func (us *UserService) TokensIDCompare(tokenPair *model.TokenPair) (uuid.UUID, e
 		}
 		accessID = uuidID
 	}
-	refreshToken, err := us.ValidateToken(tokenPair.RefreshToken, us.cfg.TokenSignature)
+	refreshToken, err := us.ValidateToken(tokenPair.RefreshToken, cfg.TokenSignature)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("UserService-TokensIDCompare-ValidateToken: error: %w", err)
 	}
@@ -199,12 +202,16 @@ func (us *UserService) GenerateTokenPair(id uuid.UUID) (*model.TokenPair, error)
 
 // GenerateJWTToken is a method that generate JWT token with given expiration with user id
 func (us *UserService) GenerateJWTToken(expiration time.Duration, id uuid.UUID) (string, error) {
+	cfg, err := config.New()
+	if err != nil {
+		return "", fmt.Errorf("could not parse config: %w", err)
+	}
 	claims := &jwt.MapClaims{
 		"exp": time.Now().Add(expiration).Unix(),
 		"id":  id,
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(us.cfg.TokenSignature))
+	tokenString, err := token.SignedString([]byte(cfg.TokenSignature))
 	if err != nil {
 		return "", fmt.Errorf("UserService-GenerateJWTToken: error in method token.SignedString: %w", err)
 	}

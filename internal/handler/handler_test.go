@@ -45,6 +45,7 @@ var (
 		Company:     "Apple",
 		StopLoss:    decimal.NewFromFloat(180.5),
 		TakeProfit:  decimal.NewFromFloat(500.5),
+		Profit:      decimal.NewFromFloat(150),
 	}
 	v = validator.New()
 )
@@ -246,5 +247,26 @@ func TestShort(t *testing.T) {
 	c := e.NewContext(req, rec)
 
 	err = hndl.Short(c)
+	require.NoError(t, err)
+}
+
+func TestClosePosition(t *testing.T) {
+	srv := new(mocks.TradingService)
+	hndl := NewHandler(nil, nil, srv, v)
+	idParams := &model.Deal{
+		DealID:    testDeal.DealID,
+		ProfileID: testDeal.ProfileID,
+	}
+	jsonData, err := json.Marshal(idParams)
+	require.NoError(t, err)
+	srv.On("ClosePosition", mock.Anything, mock.AnythingOfType("uuid.UUID"), mock.AnythingOfType("uuid.UUID")).Return(testDeal.Profit, nil).Once()
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/closeposition", bytes.NewReader(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err = hndl.ClosePosition(c)
 	require.NoError(t, err)
 }

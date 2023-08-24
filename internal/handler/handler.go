@@ -33,8 +33,9 @@ type BalanceService interface {
 // TradingService is an interface that defines the method on Trading entity.
 type TradingService interface {
 	GetProfit(ctx context.Context, strategy string, deal *model.Deal) (float64, error)
-	ClosePosition(ctx context.Context, dealid, profileid uuid.UUID) error
+	ClosePosition(ctx context.Context, dealid, profileid uuid.UUID) (float64, error)
 	GetUnclosedPositions(ctx context.Context, profileid uuid.UUID) ([]*model.Deal, error)
+	GetPrices(ctx context.Context) ([]model.Share, error)
 }
 
 // Handler is responsible for handling HTTP requests related to entities.
@@ -483,12 +484,12 @@ func (h *Handler) ClosePosition(c echo.Context) error {
 		logrus.Errorf("error: %v", err)
 		return c.JSON(http.StatusBadRequest, "Handler-ClosePosition: failed to parse id")
 	}
-	err = h.tradingService.ClosePosition(c.Request().Context(), dealUUID, profileid)
+	profit, err := h.tradingService.ClosePosition(c.Request().Context(), dealUUID, profileid)
 	if err != nil {
 		logrus.Errorf("error: %v", err)
 		return c.JSON(http.StatusBadRequest, "Handler-ClosePosition: failed to close position")
 	}
-	return c.JSON(http.StatusOK, "Position closed.")
+	return c.JSON(http.StatusOK, fmt.Sprintf("Position closed with profit %f", profit))
 }
 
 // @Summary Show all unclosed positions
@@ -514,4 +515,22 @@ func (h *Handler) GetUnclosedPositions(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, "Handler-GetUnclosedPositions: failed to get unclosed positions")
 	}
 	return c.JSON(http.StatusOK, unclosedDeals)
+}
+
+// @Summary Show prices of shares
+// @ID get-prices
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Success 200 {object} model.Share
+// @Failure 400 {string} error
+// @Router /getprices [get]
+// GetPrices calls method of Service by handler
+func (h *Handler) GetPrices(c echo.Context) error {
+	shares, err := h.tradingService.GetPrices(c.Request().Context())
+	if err != nil {
+		logrus.Errorf("error: %v", err)
+		return c.JSON(http.StatusBadRequest, "Handler-GetPrices: failed to get shares")
+	}
+	return c.JSON(http.StatusOK, shares)
 }

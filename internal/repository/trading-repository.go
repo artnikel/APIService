@@ -46,17 +46,19 @@ func (r *TradingRepository) GetProfit(ctx context.Context, strategy string, deal
 	return resp.Profit, nil
 }
 
-func (r *TradingRepository) ClosePosition(ctx context.Context, dealid ,profileid uuid.UUID) error {
-	_, err := r.client.ClosePosition(ctx, &tproto.ClosePositionRequest{
-		Dealid: dealid.String(),
+// ClosePosition call a method of TradingService.
+func (r *TradingRepository) ClosePosition(ctx context.Context, dealid, profileid uuid.UUID) (float64, error) {
+	resp, err := r.client.ClosePosition(ctx, &tproto.ClosePositionRequest{
+		Dealid:    dealid.String(),
 		Profileid: profileid.String(),
 	})
 	if err != nil {
-		return fmt.Errorf("TradingRepository-ClosePosition: error:%w", err)
+		return 0, fmt.Errorf("TradingRepository-ClosePosition: error:%w", err)
 	}
-	return nil
+	return resp.Profit, nil
 }
 
+// GetUnclosedPositions call a method of TradingService.
 func (r *TradingRepository) GetUnclosedPositions(ctx context.Context, profileid uuid.UUID) ([]*model.Deal, error) {
 	resp, err := r.client.GetUnclosedPositions(ctx, &tproto.GetUnclosedPositionsRequest{
 		Profileid: profileid.String(),
@@ -82,4 +84,21 @@ func (r *TradingRepository) GetUnclosedPositions(ctx context.Context, profileid 
 		unclosedDeals[i] = unclosedDeal
 	}
 	return unclosedDeals, nil
+}
+
+// GetPrices call a method of TradingService.
+func (r *TradingRepository) GetPrices(ctx context.Context) ([]model.Share, error) {
+	resp, err := r.client.GetPrices(ctx, &tproto.GetPricesRequest{})
+	if err != nil {
+		return nil, fmt.Errorf("TradingRepository-GetPrices: error:%w", err)
+	}
+	allShares := make([]model.Share, len(resp.Share))
+	for i, share := range resp.Share {
+		allShare := model.Share{
+			Company: share.Company,
+			Price:   share.Price,
+		}
+		allShares[i] = allShare
+	}
+	return allShares, nil
 }

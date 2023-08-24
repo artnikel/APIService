@@ -42,7 +42,7 @@ func TestGetIDByToken(t *testing.T) {
 	rep := new(mocks.BalanceRepository)
 	srv := NewBalanceService(rep)
 	urep := new(mocks.UserRepository)
-	usrv := NewUserService(urep, &cfg)
+	usrv := NewUserService(urep)
 	rep.On("GetIDByToken", mock.AnythingOfType("string")).Return(testBalance.ProfileID, nil).Once()
 	tokens, err := usrv.GenerateTokenPair(testBalance.ProfileID)
 	require.NoError(t, err)
