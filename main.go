@@ -33,6 +33,7 @@ import (
 // @in header
 // @name Authorization
 
+// nolint funlen
 func main() {
 	cfg, err := config.New()
 	if err != nil {
@@ -54,7 +55,7 @@ func main() {
 	defer func() {
 		errConnClose := uconn.Close()
 		if err != nil {
-			log.Fatalf("v not close connection: %v", errConnClose)
+			log.Fatalf("Could not close connection: %v", errConnClose)
 		}
 		errConnClose = bconn.Close()
 		if err != nil {
@@ -71,8 +72,8 @@ func main() {
 	urep := repository.NewProfileRepository(uclient)
 	brep := repository.NewBalanceRepository(bclient)
 	trep := repository.NewTradingRepository(tclient)
-	usrv := service.NewUserService(urep)
-	bsrv := service.NewBalanceService(brep)
+	usrv := service.NewUserService(urep, *cfg)
+	bsrv := service.NewBalanceService(brep, *cfg)
 	tsrv := service.NewTradingService(trep)
 	hndl := handler.NewHandler(usrv, bsrv, tsrv, v)
 	e := echo.New()
@@ -87,11 +88,11 @@ func main() {
 	e.GET("/getbalance", hndl.GetBalance, custommiddleware.JWTMiddleware)
 	e.POST("/long", hndl.Long, custommiddleware.JWTMiddleware)
 	e.POST("/short", hndl.Short, custommiddleware.JWTMiddleware)
-	e.POST("/closeposition", hndl.ClosePosition, custommiddleware.JWTMiddleware)
+	e.POST("/closeposition", hndl.ClosePositionManually, custommiddleware.JWTMiddleware)
 	e.GET("/getunclosed", hndl.GetUnclosedPositions, custommiddleware.JWTMiddleware)
 	e.GET("/getprices", hndl.GetPrices)
 
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
-	address := fmt.Sprintf(":%d", cfg.TradingApiPort)
+	address := fmt.Sprintf(":%d", cfg.TradingAPIPort)
 	e.Logger.Fatal(e.Start(address))
 }

@@ -32,8 +32,8 @@ type BalanceService interface {
 
 // TradingService is an interface that defines the method on Trading entity.
 type TradingService interface {
-	GetProfit(ctx context.Context, strategy string, deal *model.Deal) (float64, error)
-	ClosePosition(ctx context.Context, dealid, profileid uuid.UUID) (float64, error)
+	CreatePosition(ctx context.Context, deal *model.Deal) error
+	ClosePositionManually(ctx context.Context, dealid, profileid uuid.UUID) (float64, error)
 	GetUnclosedPositions(ctx context.Context, profileid uuid.UUID) ([]*model.Deal, error)
 	GetPrices(ctx context.Context) ([]model.Share, error)
 }
@@ -74,6 +74,7 @@ type closeData struct {
 	DealID string `json:"dealid" form:"dealid" validate:"required,uuid"`
 }
 
+// SignUp calls method of Service by handler
 // @Summary Registration
 // @ID create-account
 // @Tags auth
@@ -83,7 +84,6 @@ type closeData struct {
 // @Success 201 {string} string "token"
 // @Failure 400 {object} error
 // @Router /signup [post]
-// SignUp calls method of Service by handler
 func (h *Handler) SignUp(c echo.Context) error {
 	var newUser model.User
 	requestData := &inputData{}
@@ -112,6 +112,7 @@ func (h *Handler) SignUp(c echo.Context) error {
 	return c.JSON(http.StatusCreated, "Account created.")
 }
 
+// Login calls method of Service by handler
 // @Summary Account login
 // @ID login
 // @Tags auth
@@ -121,7 +122,6 @@ func (h *Handler) SignUp(c echo.Context) error {
 // @Success 200 {string} string "tokens"
 // @Failure 400 {string} error
 // @Router /login [post]
-// Login calls method of Service by handler
 func (h *Handler) Login(c echo.Context) error {
 	var requestData inputData
 	err := c.Bind(&requestData)
@@ -158,6 +158,7 @@ func (h *Handler) Login(c echo.Context) error {
 	})
 }
 
+// Refresh calls method of Service by handler
 // @Summary Refresh tokens
 // @ID refresh-token
 // @Tags auth
@@ -167,7 +168,6 @@ func (h *Handler) Login(c echo.Context) error {
 // @Success 200 {string} string "tokens"
 // @Failure 400 {string} error
 // @Router /refresh [post]
-// Refresh calls method of Service by handler
 func (h *Handler) Refresh(c echo.Context) error {
 	var requestData model.TokenPair
 	err := c.Bind(&requestData)
@@ -202,6 +202,7 @@ func (h *Handler) Refresh(c echo.Context) error {
 	})
 }
 
+// DeleteAccount calls method of Service by handler
 // @Summary Delete your account
 // @Security ApiKeyAuth
 // @ID delete-account
@@ -211,7 +212,6 @@ func (h *Handler) Refresh(c echo.Context) error {
 // @Success 200 {string} string
 // @Failure 400 {string} error
 // @Router /delete [delete]
-// DeleteAccount calls method of Service by handler
 func (h *Handler) DeleteAccount(c echo.Context) error {
 	authHeader := c.Request().Header.Get("Authorization")
 	id, err := h.balanceService.GetIDByToken(authHeader)
@@ -229,6 +229,7 @@ func (h *Handler) DeleteAccount(c echo.Context) error {
 	return c.JSON(http.StatusOK, str)
 }
 
+// Deposit calls method of Service by handler
 // @Summary Balance operation deposit
 // @Security ApiKeyAuth
 // @ID deposit
@@ -239,7 +240,6 @@ func (h *Handler) DeleteAccount(c echo.Context) error {
 // @Success 200 {string} string
 // @Failure 400 {string} error
 // @Router /deposit [post]
-// BalanceOperation calls method of Service by handler
 func (h *Handler) Deposit(c echo.Context) error {
 	var (
 		operation   float64
@@ -283,6 +283,7 @@ func (h *Handler) Deposit(c echo.Context) error {
 	return c.JSON(http.StatusOK, output(money))
 }
 
+// Withdraw calls method of Service by handler
 // @Summary Balance operation withdraw
 // @Security ApiKeyAuth
 // @ID withdraw
@@ -293,7 +294,6 @@ func (h *Handler) Deposit(c echo.Context) error {
 // @Success 200 {string} string
 // @Failure 400 {string} error
 // @Router /withdraw [post]
-// Withdraw calls method of Service by handler
 func (h *Handler) Withdraw(c echo.Context) error {
 	var (
 		operation   float64
@@ -338,6 +338,7 @@ func (h *Handler) Withdraw(c echo.Context) error {
 	return c.JSON(http.StatusOK, output(money))
 }
 
+// GetBalance calls method of Service by handler
 // @Summary Check sum of money on your balance
 // @Security ApiKeyAuth
 // @ID get-operation
@@ -347,7 +348,6 @@ func (h *Handler) Withdraw(c echo.Context) error {
 // @Success 200 {string} string
 // @Failure 400 {string} error
 // @Router /getbalance [get]
-// GetBalance calls method of Service by handler
 func (h *Handler) GetBalance(c echo.Context) error {
 	authHeader := c.Request().Header.Get("Authorization")
 	profileid, err := h.balanceService.GetIDByToken(authHeader)
@@ -365,6 +365,8 @@ func (h *Handler) GetBalance(c echo.Context) error {
 	return c.JSON(http.StatusOK, fmt.Sprintf("Balance: %f", money))
 }
 
+// nolint dupl // in swagger can't bind two routers to one method
+// Long calls method of Service by handler
 // @Summary Invest money with strategy "long"
 // @Security ApiKeyAuth
 // @ID long
@@ -375,9 +377,7 @@ func (h *Handler) GetBalance(c echo.Context) error {
 // @Success 200 {string} string
 // @Failure 400 {string} error
 // @Router /long [post]
-// Long calls method of Service by handler
 func (h *Handler) Long(c echo.Context) error {
-	strategy := "long"
 	authHeader := c.Request().Header.Get("Authorization")
 	profileid, err := h.balanceService.GetIDByToken(authHeader)
 	if err != nil {
@@ -402,14 +402,16 @@ func (h *Handler) Long(c echo.Context) error {
 		logrus.Errorf("error: %v", err)
 		return c.JSON(http.StatusBadRequest, "Handler-Long: failed to validate operation")
 	}
-	profit, err := h.tradingService.GetProfit(c.Request().Context(), strategy, deal)
+	err = h.tradingService.CreatePosition(c.Request().Context(), deal)
 	if err != nil {
 		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Long: failed to run strategies")
+		return c.JSON(http.StatusBadRequest, "Handler-Long: failed to create position long")
 	}
-	return c.JSON(http.StatusOK, fmt.Sprintf("Profit: %f", profit))
+	return c.JSON(http.StatusOK, "Position long created.")
 }
 
+// nolint dupl // in swagger can't bind two routers to one method
+// Short calls method of Service by handler
 // @Summary Invest money with strategy "short"
 // @Security ApiKeyAuth
 // @ID short
@@ -420,9 +422,7 @@ func (h *Handler) Long(c echo.Context) error {
 // @Success 200 {string} string
 // @Failure 400 {string} error
 // @Router /short [post]
-// Short calls method of Service by handler
 func (h *Handler) Short(c echo.Context) error {
-	strategy := "short"
 	authHeader := c.Request().Header.Get("Authorization")
 	profileid, err := h.balanceService.GetIDByToken(authHeader)
 	if err != nil {
@@ -447,14 +447,15 @@ func (h *Handler) Short(c echo.Context) error {
 		logrus.Errorf("error: %v", err)
 		return c.JSON(http.StatusBadRequest, "Handler-Short: failed to validate operation")
 	}
-	profit, err := h.tradingService.GetProfit(c.Request().Context(), strategy, deal)
+	err = h.tradingService.CreatePosition(c.Request().Context(), deal)
 	if err != nil {
 		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Short: failed to run strategies")
+		return c.JSON(http.StatusBadRequest, "Handler-Short: failed to create position short")
 	}
-	return c.JSON(http.StatusOK, fmt.Sprintf("Profit: %f", profit))
+	return c.JSON(http.StatusOK, "Position short created.")
 }
 
+// ClosePositionManually calls method of Service by handler
 // @Summary Close the position
 // @Security ApiKeyAuth
 // @ID close-position
@@ -465,33 +466,33 @@ func (h *Handler) Short(c echo.Context) error {
 // @Success 200 {string} string
 // @Failure 400 {string} error
 // @Router /closeposition [post]
-// ClosePosition calls method of Service by handler
-func (h *Handler) ClosePosition(c echo.Context) error {
+func (h *Handler) ClosePositionManually(c echo.Context) error {
 	authHeader := c.Request().Header.Get("Authorization")
 	profileid, err := h.balanceService.GetIDByToken(authHeader)
 	if err != nil {
 		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-ClosePosition-GetIDByToken: failed to get ID by token")
+		return c.JSON(http.StatusBadRequest, "Handler-ClosePositionManually-GetIDByToken: failed to get ID by token")
 	}
 	var requestData closeData
 	err = c.Bind(&requestData)
 	if err != nil {
 		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-ClosePosition: invalid request payload")
+		return c.JSON(http.StatusBadRequest, "Handler-ClosePositionManually: invalid request payload")
 	}
 	dealUUID, err := uuid.Parse(requestData.DealID)
 	if err != nil {
 		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-ClosePosition: failed to parse id")
+		return c.JSON(http.StatusBadRequest, "Handler-ClosePositionManually: failed to parse id")
 	}
-	profit, err := h.tradingService.ClosePosition(c.Request().Context(), dealUUID, profileid)
+	profit, err := h.tradingService.ClosePositionManually(c.Request().Context(), dealUUID, profileid)
 	if err != nil {
 		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-ClosePosition: failed to close position")
+		return c.JSON(http.StatusBadRequest, "Handler-ClosePositionManually: failed to close position")
 	}
 	return c.JSON(http.StatusOK, fmt.Sprintf("Position closed with profit %f", profit))
 }
 
+// GetUnclosedPositions calls method of Service by handler
 // @Summary Show all unclosed positions
 // @Security ApiKeyAuth
 // @ID get-unclosed
@@ -501,7 +502,6 @@ func (h *Handler) ClosePosition(c echo.Context) error {
 // @Success 200 {object} model.Deal
 // @Failure 400 {string} error
 // @Router /getunclosed [get]
-// GetUnclosedPositions calls method of Service by handler
 func (h *Handler) GetUnclosedPositions(c echo.Context) error {
 	authHeader := c.Request().Header.Get("Authorization")
 	profileid, err := h.balanceService.GetIDByToken(authHeader)
@@ -517,6 +517,7 @@ func (h *Handler) GetUnclosedPositions(c echo.Context) error {
 	return c.JSON(http.StatusOK, unclosedDeals)
 }
 
+// GetPrices calls method of Service by handler
 // @Summary Show prices of shares
 // @ID get-prices
 // @Tags auth
@@ -525,7 +526,6 @@ func (h *Handler) GetUnclosedPositions(c echo.Context) error {
 // @Success 200 {object} model.Share
 // @Failure 400 {string} error
 // @Router /getprices [get]
-// GetPrices calls method of Service by handler
 func (h *Handler) GetPrices(c echo.Context) error {
 	shares, err := h.tradingService.GetPrices(c.Request().Context())
 	if err != nil {

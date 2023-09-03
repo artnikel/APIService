@@ -3,12 +3,10 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/artnikel/APIService/internal/config"
 	"github.com/artnikel/APIService/internal/model"
-	"github.com/caarlos0/env"
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 )
@@ -22,11 +20,12 @@ type BalanceRepository interface {
 // BalanceService contains BalanceRepository interface
 type BalanceService struct {
 	bRep BalanceRepository
+	cfg  config.Variables
 }
 
 // NewBalanceService accepts BalanceRepository object and returnes an object of type *BalanceService
-func NewBalanceService(bRep BalanceRepository) *BalanceService {
-	return &BalanceService{bRep: bRep}
+func NewBalanceService(bRep BalanceRepository, cfg config.Variables) *BalanceService {
+	return &BalanceService{bRep: bRep, cfg: cfg}
 }
 
 // BalanceOperation is a method of BalanceService calls method of Repository
@@ -53,12 +52,8 @@ func (bs *BalanceService) GetIDByToken(authHeader string) (uuid.UUID, error) {
 	if tokenString == authHeader {
 		return uuid.Nil, fmt.Errorf("BalanceService-GetIDByToken: authorization header is invalid")
 	}
-	var cfg config.Variables
-	if err := env.Parse(&cfg); err != nil {
-		log.Fatalf("BalanceService-GetIDByToken: could not parse config: %v", err)
-	}
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return []byte(cfg.TokenSignature), nil
+		return []byte(bs.cfg.TokenSignature), nil
 	})
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("BalanceService-GetIDByToken: error jwt parse")

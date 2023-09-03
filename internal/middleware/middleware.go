@@ -8,16 +8,15 @@ import (
 	"time"
 
 	"github.com/artnikel/APIService/internal/config"
-	"github.com/caarlos0/env"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
 // JWTMiddleware is a middleware function that performs JWT.
 func JWTMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
-	cfg := config.Variables{}
-	if err := env.Parse(&cfg); err != nil {
-		log.Fatalf("JWTMiddleware: Failed to parse config: %v", err)
+	cfg, err := config.New()
+	if err != nil {
+		log.Fatal("JWTMiddleware: Could not parse config: ", err)
 	}
 	return func(c echo.Context) error {
 		authHeader := c.Request().Header.Get("Authorization")

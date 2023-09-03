@@ -4,8 +4,8 @@ github.com/artnikel/BalanceService v0.0.0-20230811103249-6b708502953c h1:okLqsHn
 github.com/artnikel/BalanceService v0.0.0-20230811103249-6b708502953c/go.mod h1:WpmIlQHJY5Ertr0LEJ9ZXcZeryEQvUuGNxIDAPmTR48=
 github.com/artnikel/ProfileService v0.0.0-20230808132859-2285d2c82607 h1:JG4EcaQ9devXMdtpKWkMDC9fSQTPEcvp0nvxP01fk4s=
 github.com/artnikel/ProfileService v0.0.0-20230808132859-2285d2c82607/go.mod h1:lY+lRd1Rxdn51qaW9yMl56/eN4TsfCLBxH1QZH0FEfg=
-github.com/artnikel/TradingService v0.0.0-20230823140506-49c5e0cecb6a h1:/yDy9fMhJ/SJOS49e+ZsfG7+v95oFPUqxKqJWnkXmmU=
-github.com/artnikel/TradingService v0.0.0-20230823140506-49c5e0cecb6a/go.mod h1:cvvP3RXnjBZyC6TQf42xL6qrPIEEUGaB/jbWcbhQyOM=
+github.com/artnikel/TradingService v0.0.0-20230903182357-31c1d80619b7 h1:xAY5K/pcBU6aFis2eAGR4wKJnmTWyVUzScEsH7d3Gws=
+github.com/artnikel/TradingService v0.0.0-20230903182357-31c1d80619b7/go.mod h1:NvXvs4GHtMP6ngDuF3SdspVbLh0L6hdYGBnADuia7oU=
 github.com/caarlos0/env v3.5.0+incompatible h1:Yy0UN8o9Wtr/jGHZDpCBLpNrzcFLLM2yixi/rBrKyJs=
 github.com/caarlos0/env v3.5.0+incompatible/go.mod h1:tdCsowwCzMLdkqRYDlHpZCp2UooDD3MspDBjZ2AD02Y=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=

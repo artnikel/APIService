@@ -21,7 +21,7 @@ var (
 
 func TestBalanceOperation(t *testing.T) {
 	rep := new(mocks.BalanceRepository)
-	srv := NewBalanceService(rep)
+	srv := NewBalanceService(rep, cfg)
 	rep.On("BalanceOperation", mock.Anything, mock.AnythingOfType("*model.Balance")).Return(testBalance.Operation, nil).Once()
 	_, err := srv.BalanceOperation(context.Background(), testBalance)
 	require.NoError(t, err)
@@ -30,7 +30,7 @@ func TestBalanceOperation(t *testing.T) {
 
 func TestGetBalanceAndOperation(t *testing.T) {
 	rep := new(mocks.BalanceRepository)
-	srv := NewBalanceService(rep)
+	srv := NewBalanceService(rep, cfg)
 	rep.On("GetBalance", mock.Anything, mock.AnythingOfType("uuid.UUID")).Return(testBalance.Operation, nil).Once()
 	money, err := srv.GetBalance(context.Background(), testBalance.ProfileID)
 	require.NoError(t, err)
@@ -40,9 +40,9 @@ func TestGetBalanceAndOperation(t *testing.T) {
 
 func TestGetIDByToken(t *testing.T) {
 	rep := new(mocks.BalanceRepository)
-	srv := NewBalanceService(rep)
+	srv := NewBalanceService(rep, cfg)
 	urep := new(mocks.UserRepository)
-	usrv := NewUserService(urep)
+	usrv := NewUserService(urep, cfg)
 	rep.On("GetIDByToken", mock.AnythingOfType("string")).Return(testBalance.ProfileID, nil).Once()
 	tokens, err := usrv.GenerateTokenPair(testBalance.ProfileID)
 	require.NoError(t, err)

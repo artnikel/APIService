@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/artnikel/BalanceService v0.0.0-20230811103249-6b708502953c
 	github.com/artnikel/ProfileService v0.0.0-20230808132859-2285d2c82607
-	github.com/artnikel/TradingService v0.0.0-20230823140506-49c5e0cecb6a
+	github.com/artnikel/TradingService v0.0.0-20230903182357-31c1d80619b7
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/go-playground/validator/v10 v10.15.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible

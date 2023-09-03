@@ -23,10 +23,9 @@ func NewTradingRepository(client tproto.TradingServiceClient) *TradingRepository
 	}
 }
 
-// GetProfit call a method of TradingService.
-func (r *TradingRepository) GetProfit(ctx context.Context, strategy string, deal *model.Deal) (float64, error) {
-	resp, err := r.client.GetProfit(ctx, &tproto.GetProfitRequest{
-		Strategy: strategy,
+// CreatePosition call a method of TradingService.
+func (r *TradingRepository) CreatePosition(ctx context.Context, deal *model.Deal) error {
+	_, err := r.client.CreatePosition(ctx, &tproto.CreatePositionRequest{
 		Deal: &tproto.Deal{
 			DealID:        deal.DealID.String(),
 			SharesCount:   deal.SharesCount.InexactFloat64(),
@@ -41,19 +40,19 @@ func (r *TradingRepository) GetProfit(ctx context.Context, strategy string, deal
 		},
 	})
 	if err != nil {
-		return 0, fmt.Errorf("TradingRepository-GetProfit: error:%w", err)
+		return fmt.Errorf("TradingRepository-CreatePosition: error:%w", err)
 	}
-	return resp.Profit, nil
+	return nil
 }
 
-// ClosePosition call a method of TradingService.
-func (r *TradingRepository) ClosePosition(ctx context.Context, dealid, profileid uuid.UUID) (float64, error) {
-	resp, err := r.client.ClosePosition(ctx, &tproto.ClosePositionRequest{
+// ClosePositionManually call a method of TradingService.
+func (r *TradingRepository) ClosePositionManually(ctx context.Context, dealid, profileid uuid.UUID) (float64, error) {
+	resp, err := r.client.ClosePositionManually(ctx, &tproto.ClosePositionManuallyRequest{
 		Dealid:    dealid.String(),
 		Profileid: profileid.String(),
 	})
 	if err != nil {
-		return 0, fmt.Errorf("TradingRepository-ClosePosition: error:%w", err)
+		return 0, fmt.Errorf("TradingRepository-ClosePositionManually: error:%w", err)
 	}
 	return resp.Profit, nil
 }
