@@ -9,6 +9,7 @@ import (
 	"github.com/artnikel/APIService/internal/model"
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 // BalanceRepository is an interface that contains methods for user manipulation
@@ -30,9 +31,23 @@ func NewBalanceService(bRep BalanceRepository, cfg config.Variables) *BalanceSer
 
 // BalanceOperation is a method of BalanceService calls method of Repository
 func (bs *BalanceService) BalanceOperation(ctx context.Context, balance *model.Balance) (float64, error) {
+	if decimal.NewFromFloat(balance.Operation).IsNegative() {
+		money, err := bs.GetBalance(ctx, balance.ProfileID)
+		if err != nil {
+			return 0, fmt.Errorf("BalanceService-BalanceOperation-GetBalance: error:%v", err)
+		}
+		if decimal.NewFromFloat(money).Cmp(decimal.NewFromFloat(balance.Operation).Abs()) == 1 {
+			operation, err := bs.bRep.BalanceOperation(ctx, balance)
+			if err != nil {
+				return 0, fmt.Errorf("BalanceService-BalanceOperation: error:%v", err)
+			}
+			return operation, nil
+		}
+		return 0, fmt.Errorf("BalanceService-BalanceOperation: not enough money")
+	}
 	operation, err := bs.bRep.BalanceOperation(ctx, balance)
 	if err != nil {
-		return 0, fmt.Errorf("BalanceService-BalanceOperation: error: %w", err)
+		return 0, fmt.Errorf("BalanceService-BalanceOperation: error:%v", err)
 	}
 	return operation, nil
 }
