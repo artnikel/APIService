@@ -37,33 +37,33 @@ import (
 func main() {
 	cfg, err := config.New()
 	if err != nil {
-		log.Fatal("Could not parse config: ", err)
+		log.Fatalf("could not parse config: %v", err)
 	}
 	v := validator.New()
 	uconn, err := grpc.Dial("localhost:8090", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("Could not connect: %v", err)
+		log.Fatalf("could not connect: %v", err)
 	}
 	bconn, err := grpc.Dial("localhost:8095", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("Could not connect: %v", err)
+		log.Fatalf("could not connect: %v", err)
 	}
 	tconn, err := grpc.Dial("localhost:8088", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("Could not connect: %v", err)
+		log.Fatalf("could not connect: %v", err)
 	}
 	defer func() {
 		errConnClose := uconn.Close()
 		if err != nil {
-			log.Fatalf("Could not close connection: %v", errConnClose)
+			log.Fatalf("could not close connection: %v", errConnClose)
 		}
 		errConnClose = bconn.Close()
 		if err != nil {
-			log.Fatalf("Could not close connection: %v", errConnClose)
+			log.Fatalf("could not close connection: %v", errConnClose)
 		}
 		errConnClose = tconn.Close()
 		if err != nil {
-			log.Fatalf("Could not close connection: %v", errConnClose)
+			log.Fatalf("could not close connection: %v", errConnClose)
 		}
 	}()
 	uclient := uproto.NewUserServiceClient(uconn)
@@ -76,6 +76,7 @@ func main() {
 	bsrv := service.NewBalanceService(brep, *cfg)
 	tsrv := service.NewTradingService(trep)
 	hndl := handler.NewHandler(usrv, bsrv, tsrv, v)
+	fmt.Println("API Service started")
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
@@ -91,7 +92,6 @@ func main() {
 	e.POST("/closeposition", hndl.ClosePositionManually, custommiddleware.JWTMiddleware)
 	e.GET("/getunclosed", hndl.GetUnclosedPositions, custommiddleware.JWTMiddleware)
 	e.GET("/getprices", hndl.GetPrices)
-
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 	address := fmt.Sprintf(":%d", cfg.TradingAPIPort)
 	e.Logger.Fatal(e.Start(address))

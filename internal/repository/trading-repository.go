@@ -40,7 +40,7 @@ func (r *TradingRepository) CreatePosition(ctx context.Context, deal *model.Deal
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("TradingRepository-CreatePosition: error:%w", err)
+		return fmt.Errorf("createPosition %w", err)
 	}
 	return nil
 }
@@ -52,7 +52,7 @@ func (r *TradingRepository) ClosePositionManually(ctx context.Context, dealid, p
 		Profileid: profileid.String(),
 	})
 	if err != nil {
-		return 0, fmt.Errorf("TradingRepository-ClosePositionManually: error:%w", err)
+		return 0, fmt.Errorf("closePositionManually %w", err)
 	}
 	return resp.Profit, nil
 }
@@ -63,13 +63,13 @@ func (r *TradingRepository) GetUnclosedPositions(ctx context.Context, profileid 
 		Profileid: profileid.String(),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("TradingRepository-GetUncosedPositions: error:%w", err)
+		return nil, fmt.Errorf("getUncosedPositions %w", err)
 	}
 	unclosedDeals := make([]*model.Deal, len(resp.Deal))
 	for i, deal := range resp.Deal {
 		dealUUID, err := uuid.Parse(deal.DealID)
 		if err != nil {
-			return nil, fmt.Errorf("TradingRepository-GetUncosedPositions: error:%w", err)
+			return nil, fmt.Errorf("parse %w", err)
 		}
 		unclosedDeal := &model.Deal{
 			DealID:        dealUUID,
@@ -89,7 +89,7 @@ func (r *TradingRepository) GetUnclosedPositions(ctx context.Context, profileid 
 func (r *TradingRepository) GetPrices(ctx context.Context) ([]model.Share, error) {
 	resp, err := r.client.GetPrices(ctx, &tproto.GetPricesRequest{})
 	if err != nil {
-		return nil, fmt.Errorf("TradingRepository-GetPrices: error:%w", err)
+		return nil, fmt.Errorf("getPrices %w", err)
 	}
 	allShares := make([]model.Share, len(resp.Share))
 	for i, share := range resp.Share {

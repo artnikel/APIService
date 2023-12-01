@@ -30,11 +30,11 @@ func (b *BalanceRepository) BalanceOperation(ctx context.Context, balance *model
 		Operation: balance.Operation,
 	}})
 	if err != nil {
-		return 0, fmt.Errorf("BalanceRepository-BalanceOperation: error:%w", err)
+		return 0, fmt.Errorf("balanceOperation %w", err)
 	}
 	operation, err := strconv.ParseFloat(resp.Operation, 64)
 	if err != nil {
-		return 0, fmt.Errorf("BalanceRepository-BalanceOperation: failed to parsing float:%w", err)
+		return 0, fmt.Errorf("parseFloat %w", err)
 	}
 	return operation, nil
 }
@@ -43,7 +43,7 @@ func (b *BalanceRepository) BalanceOperation(ctx context.Context, balance *model
 func (b *BalanceRepository) GetBalance(ctx context.Context, profileid uuid.UUID) (float64, error) {
 	resp, err := b.client.GetBalance(ctx, &bproto.GetBalanceRequest{Profileid: profileid.String()})
 	if err != nil {
-		return 0, fmt.Errorf("BalanceRepository-GetBalance: error:%w", err)
+		return 0, fmt.Errorf("getBalance %w", err)
 	}
 	return resp.Money, nil
 }

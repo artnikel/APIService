@@ -30,7 +30,7 @@ func NewTradingService(tRep TradingRepository) *TradingService {
 func (ts *TradingService) CreatePosition(ctx context.Context, deal *model.Deal) error {
 	err := ts.tRep.CreatePosition(ctx, deal)
 	if err != nil {
-		return fmt.Errorf("TradingService-CreatePosition: error:%w", err)
+		return fmt.Errorf("createPosition %w", err)
 	}
 	return nil
 }
@@ -39,7 +39,7 @@ func (ts *TradingService) CreatePosition(ctx context.Context, deal *model.Deal) 
 func (ts *TradingService) ClosePositionManually(ctx context.Context, dealid, profileid uuid.UUID) (float64, error) {
 	profit, err := ts.tRep.ClosePositionManually(ctx, dealid, profileid)
 	if err != nil {
-		return 0, fmt.Errorf("TradingService-ClosePositionManually: error:%w", err)
+		return 0, fmt.Errorf("closePositionManually %w", err)
 	}
 	return profit, nil
 }
@@ -48,7 +48,7 @@ func (ts *TradingService) ClosePositionManually(ctx context.Context, dealid, pro
 func (ts *TradingService) GetUnclosedPositions(ctx context.Context, profileid uuid.UUID) ([]*model.Deal, error) {
 	unclosedDeals, err := ts.tRep.GetUnclosedPositions(ctx, profileid)
 	if err != nil {
-		return nil, fmt.Errorf("TradingService-GetUnclosedPositions: error:%w", err)
+		return nil, fmt.Errorf("getUnclosedPositions %w", err)
 	}
 	return unclosedDeals, nil
 }
@@ -57,7 +57,7 @@ func (ts *TradingService) GetUnclosedPositions(ctx context.Context, profileid uu
 func (ts *TradingService) GetPrices(ctx context.Context) ([]model.Share, error) {
 	shares, err := ts.tRep.GetPrices(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("TradingService-GetPrices: error:%w", err)
+		return nil, fmt.Errorf("getPrices %w", err)
 	}
 	return shares, nil
 }

@@ -29,7 +29,7 @@ func (p *ProfileRepository) SignUp(ctx context.Context, user *model.User) error 
 		Password: string(user.Password),
 	}})
 	if err != nil {
-		return fmt.Errorf("ProfileRepository-SignUp: error:%w", err)
+		return fmt.Errorf("signUp %w", err)
 	}
 	return nil
 }
@@ -38,11 +38,11 @@ func (p *ProfileRepository) SignUp(ctx context.Context, user *model.User) error 
 func (p *ProfileRepository) GetByLogin(ctx context.Context, login string) ([]byte, uuid.UUID, error) {
 	resp, err := p.client.GetByLogin(ctx, &uproto.GetByLoginRequest{Login: login})
 	if err != nil {
-		return nil, uuid.Nil, fmt.Errorf("ProfileRepository-SignUp: error:%w", err)
+		return nil, uuid.Nil, fmt.Errorf("getByLogin %w", err)
 	}
 	idUUID, err := uuid.Parse(resp.Id)
 	if err != nil {
-		return nil, uuid.Nil, fmt.Errorf("ProfileRepository-SignUp: failed to parse:%w", err)
+		return nil, uuid.Nil, fmt.Errorf("parse %w", err)
 	}
 	return []byte(resp.Password), idUUID, nil
 }
@@ -54,7 +54,7 @@ func (p *ProfileRepository) AddRefreshToken(ctx context.Context, id uuid.UUID, r
 		RefreshToken: refreshToken,
 	})
 	if err != nil {
-		return fmt.Errorf("ProfileRepository-AddRefreshToken: error:%w", err)
+		return fmt.Errorf("addRefreshToken %w", err)
 	}
 	return nil
 }
@@ -63,7 +63,7 @@ func (p *ProfileRepository) AddRefreshToken(ctx context.Context, id uuid.UUID, r
 func (p *ProfileRepository) GetRefreshTokenByID(ctx context.Context, id uuid.UUID) (string, error) {
 	resp, err := p.client.GetRefreshTokenByID(ctx, &uproto.GetRefreshTokenByIDRequest{Id: id.String()})
 	if err != nil {
-		return "", fmt.Errorf("ProfileRepository-GetRefreshTokenByID: error:%w", err)
+		return "", fmt.Errorf("getRefreshTokenByID %w", err)
 	}
 	return resp.RefreshToken, nil
 }
@@ -72,7 +72,7 @@ func (p *ProfileRepository) GetRefreshTokenByID(ctx context.Context, id uuid.UUI
 func (p *ProfileRepository) DeleteAccount(ctx context.Context, id uuid.UUID) (string, error) {
 	resp, err := p.client.DeleteAccount(ctx, &uproto.DeleteAccountRequest{Id: id.String()})
 	if err != nil {
-		return "", fmt.Errorf("ProfileRepository-DeleteAccount: error:%w", err)
+		return "", fmt.Errorf("deleteAccount %w", err)
 	}
 	return resp.Id, nil
 }

@@ -46,11 +46,11 @@ func (us *UserService) SignUp(ctx context.Context, user *model.User) error {
 	var err error
 	user.Password, err = us.GenerateHash(user.Password)
 	if err != nil {
-		return fmt.Errorf("UserService-SignUp-GenerateHash: error: %w", err)
+		return fmt.Errorf("generateHash %w", err)
 	}
 	err = us.uRep.SignUp(ctx, user)
 	if err != nil {
-		return fmt.Errorf("UserService-SignUp: error: %w", err)
+		return fmt.Errorf("signUp %w", err)
 	}
 	return nil
 }
@@ -60,25 +60,25 @@ func (us *UserService) Login(ctx context.Context, user *model.User) (*model.Toke
 	hash, id, err := us.uRep.GetByLogin(ctx, user.Login)
 	user.ID = id
 	if err != nil {
-		return &model.TokenPair{}, fmt.Errorf("UserService-Login-GetByLogin: error: %w", err)
+		return &model.TokenPair{}, fmt.Errorf("getByLogin %w", err)
 	}
 	verified, err := us.CheckPasswordHash(hash, user.Password)
 	if err != nil || !verified {
-		return &model.TokenPair{}, fmt.Errorf("UserService-Login-CheckPasswordHash: error: %w", err)
+		return &model.TokenPair{}, fmt.Errorf("checkPasswordHash %w", err)
 	}
 	tokenPair, err := us.GenerateTokenPair(user.ID)
 	if err != nil {
-		return &model.TokenPair{}, fmt.Errorf("UserService-Login-GenerateTokenPair: error: %w", err)
+		return &model.TokenPair{}, fmt.Errorf("generateTokenPair %w", err)
 	}
 	sum := sha256.Sum256([]byte(tokenPair.RefreshToken))
 	hashedRefreshToken, err := us.GenerateHash(sum[:])
 	if err != nil {
-		return &model.TokenPair{}, fmt.Errorf("UserService-Login-GenerateHash: error: %w", err)
+		return &model.TokenPair{}, fmt.Errorf("generateHash %w", err)
 	}
 	user.RefreshToken = string(hashedRefreshToken)
 	err = us.uRep.AddRefreshToken(context.Background(), user.ID, user.RefreshToken)
 	if err != nil {
-		return &model.TokenPair{}, fmt.Errorf("UserService-Login-AddRefreshToken: error: %w", err)
+		return &model.TokenPair{}, fmt.Errorf("addRefreshToken %w", err)
 	}
 	return tokenPair, nil
 }
@@ -87,32 +87,32 @@ func (us *UserService) Login(ctx context.Context, user *model.User) (*model.Toke
 func (us *UserService) Refresh(ctx context.Context, tokenPair *model.TokenPair) (*model.TokenPair, error) {
 	id, err := us.TokensIDCompare(tokenPair)
 	if err != nil {
-		return &model.TokenPair{}, fmt.Errorf("UserService-Refresh-TokensIDCompare: error: %w", err)
+		return &model.TokenPair{}, fmt.Errorf("tokensIDCompare %w", err)
 	}
 	hash, err := us.uRep.GetRefreshTokenByID(ctx, id)
 	if err != nil {
-		return &model.TokenPair{}, fmt.Errorf("UserService-Refresh-GetPasswordByUsernsame: error: %w", err)
+		return &model.TokenPair{}, fmt.Errorf("getPasswordByUsernsame %w", err)
 	}
 	sum := sha256.Sum256([]byte(tokenPair.RefreshToken))
 	verified, err := us.CheckPasswordHash([]byte(hash), sum[:])
 	if err != nil || !verified {
-		return &model.TokenPair{}, fmt.Errorf("UserService-Refresh-CheckPasswordHash: error: refreshToken invalid")
+		return &model.TokenPair{}, fmt.Errorf("refreshToken invalid")
 	}
 	tokenPair, err = us.GenerateTokenPair(id)
 	if err != nil {
-		return &model.TokenPair{}, fmt.Errorf("UserService-Refresh-GenerateTokenPair: error: %w", err)
+		return &model.TokenPair{}, fmt.Errorf("generateTokenPair %w", err)
 	}
 	sum = sha256.Sum256([]byte(tokenPair.RefreshToken))
 	hashedRefreshToken, err := us.GenerateHash(sum[:])
 	if err != nil {
-		return &model.TokenPair{}, fmt.Errorf("UserService-Refresh-GenerateHash: error: %w", err)
+		return &model.TokenPair{}, fmt.Errorf("generateHash %w", err)
 	}
 	var user model.User
 	user.RefreshToken = string(hashedRefreshToken)
 	user.ID = id
 	err = us.uRep.AddRefreshToken(context.Background(), user.ID, user.RefreshToken)
 	if err != nil {
-		return &model.TokenPair{}, fmt.Errorf("UserService-Refresh-AddRefreshToken: error: %w", err)
+		return &model.TokenPair{}, fmt.Errorf("addRefreshToken %w", err)
 	}
 	return tokenPair, nil
 }
@@ -121,7 +121,7 @@ func (us *UserService) Refresh(ctx context.Context, tokenPair *model.TokenPair) 
 func (us *UserService) DeleteAccount(ctx context.Context, id uuid.UUID) (string, error) {
 	idString, err := us.uRep.DeleteAccount(ctx, id)
 	if err != nil {
-		return "", fmt.Errorf("UserService-DeleteAccount: error: %w", err)
+		return "", fmt.Errorf("deleteAccount %w", err)
 	}
 	return idString, nil
 }
@@ -130,35 +130,35 @@ func (us *UserService) DeleteAccount(ctx context.Context, id uuid.UUID) (string,
 func (us *UserService) TokensIDCompare(tokenPair *model.TokenPair) (uuid.UUID, error) {
 	accessToken, err := us.ValidateToken(tokenPair.AccessToken, us.cfg.TokenSignature)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("UserService-TokensIDCompare-ValidateToken: error: %w", err)
+		return uuid.Nil, fmt.Errorf("validateToken %w", err)
 	}
 	var accessID uuid.UUID
 	var uuidID uuid.UUID
 	if claims, ok := accessToken.Claims.(jwt.MapClaims); ok && accessToken.Valid {
 		uuidID, err = uuid.Parse(claims["id"].(string))
 		if err != nil {
-			return uuid.Nil, fmt.Errorf("UserService-TokensIDCompare: error in method uuid.Parse: %w", err)
+			return uuid.Nil, fmt.Errorf("parse %w", err)
 		}
 		accessID = uuidID
 	}
 	refreshToken, err := us.ValidateToken(tokenPair.RefreshToken, us.cfg.TokenSignature)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("UserService-TokensIDCompare-ValidateToken: error: %w", err)
+		return uuid.Nil, fmt.Errorf("validateToken %w", err)
 	}
 	var refreshID uuid.UUID
 	if claims, ok := refreshToken.Claims.(jwt.MapClaims); ok && refreshToken.Valid {
 		exp := claims["exp"].(float64)
 		uuidID, err = uuid.Parse(claims["id"].(string))
 		if err != nil {
-			return uuid.Nil, fmt.Errorf("UserService-TokensIDCompare: error in method uuid.Parse: %w", err)
+			return uuid.Nil, fmt.Errorf("parse %w", err)
 		}
 		refreshID = uuidID
 		if exp < float64(time.Now().Unix()) {
-			return uuid.Nil, fmt.Errorf("UserService-TokensIDCompare-ValidateToken: error: %w", err)
+			return uuid.Nil, fmt.Errorf("token is expired")
 		}
 	}
 	if accessID != refreshID {
-		return uuid.Nil, fmt.Errorf("UserService-TokensIDCompare: error: user ID in access token doesn't equal user ID in refresh token")
+		return uuid.Nil, fmt.Errorf("user ID in access token doesn't equal user ID in refresh token")
 	}
 	return accessID, nil
 }
@@ -167,7 +167,7 @@ func (us *UserService) TokensIDCompare(tokenPair *model.TokenPair) (uuid.UUID, e
 func (us *UserService) GenerateHash(password []byte) ([]byte, error) {
 	bytes, err := bcrypt.GenerateFromPassword(password, bcryptCost)
 	if err != nil {
-		return bytes, fmt.Errorf("UserService-GenerateHash: error in method GenerateFromPassword: %w", err)
+		return bytes, fmt.Errorf("generateFromPassword %w", err)
 	}
 	return bytes, nil
 }
@@ -176,7 +176,7 @@ func (us *UserService) GenerateHash(password []byte) ([]byte, error) {
 func (us *UserService) CheckPasswordHash(hash, password []byte) (bool, error) {
 	err := bcrypt.CompareHashAndPassword(hash, password)
 	if err != nil {
-		return false, fmt.Errorf("UserService-CheckPasswordHash: error in method CompareHashAndPassword: %w", err)
+		return false, fmt.Errorf("compareHashAndPassword %w", err)
 	}
 	return true, nil
 }
@@ -185,11 +185,11 @@ func (us *UserService) CheckPasswordHash(hash, password []byte) (bool, error) {
 func (us *UserService) GenerateTokenPair(id uuid.UUID) (*model.TokenPair, error) {
 	accessToken, err := us.GenerateJWTToken(accessTokenExpiration, id)
 	if err != nil {
-		return &model.TokenPair{}, fmt.Errorf("UserService-GenerateTokenPair-GenerateJWTToken: error: %w", err)
+		return &model.TokenPair{}, fmt.Errorf("generateJWTToken %w", err)
 	}
 	refreshToken, err := us.GenerateJWTToken(refreshTokenExpiration, id)
 	if err != nil {
-		return &model.TokenPair{}, fmt.Errorf("UserService-GenerateTokenPair-GenerateJWTToken: error: %w", err)
+		return &model.TokenPair{}, fmt.Errorf("generateJWTToken %w", err)
 	}
 	return &model.TokenPair{
 		AccessToken:  accessToken,
@@ -206,7 +206,7 @@ func (us *UserService) GenerateJWTToken(expiration time.Duration, id uuid.UUID) 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString([]byte(us.cfg.TokenSignature))
 	if err != nil {
-		return "", fmt.Errorf("UserService-GenerateJWTToken: error in method token.SignedString: %w", err)
+		return "", fmt.Errorf("token.SignedString %w", err)
 	}
 	return tokenString, nil
 }
