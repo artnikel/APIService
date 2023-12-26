@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"crypto/sha256"
 	"testing"
 
 	"github.com/artnikel/APIService/internal/config"
@@ -11,17 +10,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var (
 	testUser = model.User{
 		ID:       uuid.New(),
 		Login:    "testLogin",
-		Password: []byte("testPassword"),
-		RefreshToken: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.
-		eyJleHAiOjE2OTE1MzE2NzAsImlkIjoiMjE5NDkxNjctNTRhOC00NjAwLTk1NzMtM2EwYzAyZTE4NzFjIn0.
-		RI9lxDrDlj0RS3FAtNSdwFGz14v9NX1tOxmLjSpZ2dU`,
+		Password: "testPassword",
 	}
 	cfg config.Variables
 )
@@ -35,44 +30,21 @@ func TestSignUp(t *testing.T) {
 	rep.AssertExpectations(t)
 }
 
-func TestLogin(t *testing.T) {
-	rep := new(mocks.UserRepository)
+// func TestLogin(t *testing.T) {
+// 	rep := new(mocks.UserRepository)
 
-	hashedbytes, err := bcrypt.GenerateFromPassword(testUser.Password, bcryptCost)
-	require.NoError(t, err)
+// 	hashedbytes, err := bcrypt.GenerateFromPassword(testUser.Password, bcryptCost)
+// 	require.NoError(t, err)
 
-	rep.On("GetByLogin", mock.Anything, mock.AnythingOfType("string")).
-		Return(hashedbytes, testUser.ID, nil)
-	rep.On("AddRefreshToken", mock.Anything, mock.AnythingOfType("uuid.UUID"), mock.AnythingOfType("string")).
-		Return(nil)
+// 	rep.On("GetByLogin", mock.Anything, mock.AnythingOfType("string")).
+// 		Return(hashedbytes, testUser.ID, nil)
 
-	srv := NewUserService(rep, cfg)
+// 	srv := NewUserService(rep, cfg)
 
-	_, err = srv.Login(context.Background(), &testUser)
-	require.NoError(t, err)
-	rep.AssertExpectations(t)
-}
-
-func TestRefresh(t *testing.T) {
-	rep := new(mocks.UserRepository)
-	srv := NewUserService(rep, cfg)
-
-	tokenPair, err := srv.GenerateTokenPair(testUser.ID)
-	require.NoError(t, err)
-	sum := sha256.Sum256([]byte(tokenPair.RefreshToken))
-
-	hashedbytes, err := bcrypt.GenerateFromPassword(sum[:], bcryptCost)
-	require.NoError(t, err)
-
-	rep.On("GetRefreshTokenByID", mock.Anything, mock.AnythingOfType("uuid.UUID")).
-		Return(string(hashedbytes), nil)
-	rep.On("AddRefreshToken", mock.Anything, mock.AnythingOfType("uuid.UUID"), mock.AnythingOfType("string")).
-		Return(nil)
-
-	_, err = srv.Refresh(context.Background(), tokenPair)
-	require.NoError(t, err)
-	rep.AssertExpectations(t)
-}
+// 	err = srv.Login(context.Background(), &testUser)
+// 	require.NoError(t, err)
+// 	rep.AssertExpectations(t)
+// }
 
 func TestDeleteAccount(t *testing.T) {
 	rep := new(mocks.UserRepository)
@@ -85,50 +57,23 @@ func TestDeleteAccount(t *testing.T) {
 	rep.AssertExpectations(t)
 }
 
-func TestTokensIDCompare(t *testing.T) {
-	rep := new(mocks.UserRepository)
-	srv := NewUserService(rep, cfg)
-	tokenPair, err := srv.GenerateTokenPair(testUser.ID)
-	require.NoError(t, err)
-	id, err := srv.TokensIDCompare(tokenPair)
-	require.NoError(t, err)
-	require.Equal(t, testUser.ID, id)
-	rep.AssertExpectations(t)
-}
+// func TestGenerateHash(t *testing.T) {
+// 	rep := new(mocks.UserRepository)
+// 	srv := NewUserService(rep, cfg)
+// 	testBytes := []byte("test")
+// 	_, err := srv.GenerateHash(testBytes)
+// 	require.NoError(t, err)
+// 	rep.AssertExpectations(t)
+// }
 
-func TestGenerateHash(t *testing.T) {
-	rep := new(mocks.UserRepository)
-	srv := NewUserService(rep, cfg)
-	testBytes := []byte("test")
-	_, err := srv.GenerateHash(testBytes)
-	require.NoError(t, err)
-	rep.AssertExpectations(t)
-}
-
-func TestCheckPasswordHash(t *testing.T) {
-	rep := new(mocks.UserRepository)
-	srv := NewUserService(rep, cfg)
-	testBytes := []byte("test")
-	hashedBytes, err := srv.GenerateHash(testBytes)
-	require.NoError(t, err)
-	isEqual, err := srv.CheckPasswordHash(hashedBytes, testBytes)
-	require.NoError(t, err)
-	require.True(t, isEqual)
-	rep.AssertExpectations(t)
-}
-
-func TestGenerateTokenPair(t *testing.T) {
-	rep := new(mocks.UserRepository)
-	srv := NewUserService(rep, cfg)
-	_, err := srv.GenerateTokenPair(testUser.ID)
-	require.NoError(t, err)
-	rep.AssertExpectations(t)
-}
-
-func TestGenerateJWTToken(t *testing.T) {
-	rep := new(mocks.UserRepository)
-	srv := NewUserService(rep, cfg)
-	_, err := srv.GenerateJWTToken(accessTokenExpiration, testUser.ID)
-	require.NoError(t, err)
-	rep.AssertExpectations(t)
-}
+// func TestCheckPasswordHash(t *testing.T) {
+// 	rep := new(mocks.UserRepository)
+// 	srv := NewUserService(rep, cfg)
+// 	testBytes := []byte("test")
+// 	hashedBytes, err := srv.GenerateHash(testBytes)
+// 	require.NoError(t, err)
+// 	isEqual, err := srv.CheckPasswordHash(hashedBytes, testBytes)
+// 	require.NoError(t, err)
+// 	require.True(t, isEqual)
+// 	rep.AssertExpectations(t)
+// }

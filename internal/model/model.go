@@ -10,22 +10,15 @@ import (
 
 // User contains an info about the user and will be written in a users table
 type User struct {
-	ID           uuid.UUID `json:"-"`                                      // unique id of user
-	Login        string    `json:"login" validate:"required,min=5,max=20"` // username of user account
-	Password     []byte    `json:"password" validate:"required,min=8"`     // password of user account
-	RefreshToken string    `json:"-"`                                      // token that storing the session in the database
+	ID       uuid.UUID // unique id of user
+	Login    string    `json:"login" form:"login" validate:"required,min=5,max=20"` // username of user account
+	Password string    `json:"password" form:"password" validate:"required,min=8"`  // password of user account
 }
 
 // Share is a struct for shares entity
 type Share struct {
 	Company string  `json:"company"`
 	Price   float64 `json:"price"`
-}
-
-// TokenPair contains two tokens for authorization of user
-type TokenPair struct {
-	AccessToken  string `json:"accesstoken" form:"accesstoken"`   // token that gives access to secure methods
-	RefreshToken string `json:"refreshtoken" form:"refreshtoken"` // same token as in struct User
 }
 
 // Balance contains an info about the balance and will be written in a balance table

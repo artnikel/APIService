@@ -16,10 +16,7 @@ var (
 	testUser = model.User{
 		ID:       uuid.New(),
 		Login:    "testLogin",
-		Password: []byte("testPassword"),
-		RefreshToken: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.
-		eyJleHAiOjE2OTE1MzE2NzAsImlkIjoiMjE5NDkxNjctNTRhOC00NjAwLTk1NzMtM2EwYzAyZTE4NzFjIn0.
-		RI9lxDrDlj0RS3FAtNSdwFGz14v9NX1tOxmLjSpZ2dU`,
+		Password: "testPassword",
 	}
 )
 
@@ -42,27 +39,6 @@ func TestGetByLogin(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, password, testUser.Password)
 	require.Equal(t, id, testUser.ID)
-	client.AssertExpectations(t)
-}
-
-func TestAddRefreshToken(t *testing.T) {
-	client := new(mocks.UserServiceClient)
-	client.On("AddRefreshToken", mock.Anything, mock.Anything).
-		Return(nil, nil)
-	rep := NewProfileRepository(client)
-	err := rep.AddRefreshToken(context.Background(), testUser.ID, testUser.RefreshToken)
-	require.NoError(t, err)
-	client.AssertExpectations(t)
-}
-
-func TestGetRefreshTokenByID(t *testing.T) {
-	client := new(mocks.UserServiceClient)
-	client.On("GetRefreshTokenByID", mock.Anything, mock.Anything).
-		Return(&uproto.GetRefreshTokenByIDResponse{RefreshToken: testUser.RefreshToken}, nil)
-	rep := NewProfileRepository(client)
-	refreshToken, err := rep.GetRefreshTokenByID(context.Background(), testUser.ID)
-	require.NoError(t, err)
-	require.Equal(t, refreshToken, testUser.RefreshToken)
 	client.AssertExpectations(t)
 }
 

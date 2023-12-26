@@ -7,6 +7,7 @@ import "github.com/caarlos0/env"
 type Variables struct {
 	TokenSignature string `env:"TOKEN_SIGNATURE"`
 	TradingAPIPort int    `env:"TRADING_API_PORT"`
+	RedisPriceAddress string `env:"REDIS_PRICE_ADDRESS"`
 }
 
 // New returns parsed object of config
