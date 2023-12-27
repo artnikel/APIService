@@ -89,6 +89,43 @@ func (h *Handler) Auth(c echo.Context) error {
 	return tmpl.ExecuteTemplate(c.Response().Writer, "auth", nil)
 }
 
+func (h *Handler) Index(c echo.Context) error {
+	tmpl, err := template.ParseFiles("templates/index/index.html")
+	if err != nil {
+		return echo.ErrNotFound
+	}
+	cookie, err := c.Cookie("SESSION_ID")
+	if err != nil {
+		logrus.Errorf("index %v", err)
+		return c.Redirect(http.StatusSeeOther, "/")
+	}
+	store := NewRedisStore(h.cfg)
+	session, err := store.Get(c.Request(), cookie.Name)
+	if err != nil {
+		logrus.Errorf("index %v", err)
+		return echo.ErrNotFound
+	}
+	if len(session.Values) == 0 {
+		return c.Redirect(http.StatusSeeOther, "/")
+	}
+	profileid := session.Values["id"].(string)
+	profileUUID, err := uuid.Parse(profileid)
+	if err != nil {
+		logrus.Errorf("index %v", err)
+		return echo.ErrInternalServerError
+	}
+	balance, err := h.balanceService.GetBalance(c.Request().Context(),profileUUID)
+	if err != nil {
+		logrus.Errorf("index %v", err)
+		return echo.ErrInternalServerError
+	}
+	return tmpl.ExecuteTemplate(c.Response().Writer, "index", struct {
+		Balance   float64
+	}{
+		Balance:   balance,
+	})
+}
+
 // SignUp calls method of Service by handler
 func (h *Handler) SignUp(c echo.Context) error {
 	tmpl, err := template.ParseFiles("templates/auth/auth.html")

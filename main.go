@@ -72,6 +72,7 @@ func main() {
 	store.SetMaxAge(10 * 24 * 3600)
 	e.Use(session.Middleware(store))
 	e.GET("/", hndl.Auth)
+	e.GET("/index", hndl.Index)
 	e.POST("/signup", hndl.SignUp)
 	e.POST("/login", hndl.Login)
 	e.DELETE("/delete", hndl.DeleteAccount)
