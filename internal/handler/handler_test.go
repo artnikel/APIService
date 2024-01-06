@@ -1,36 +1,29 @@
 package handler
 
-import (
-	"github.com/artnikel/APIService/internal/model"
-	"github.com/go-playground/validator/v10"
-	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
-)
-
-var (
-	testUser = model.User{
-		ID:       uuid.New(),
-		Login:    "testLogin",
-		Password: "testPassword",
-	}
-	testBalance = model.Balance{
-		BalanceID: uuid.New(),
-		ProfileID: uuid.New(),
-		Operation: 637.81,
-	}
-	testDeal = model.Deal{
-		SharesCount: decimal.NewFromFloat(1.5),
-		Company:     "Apple",
-		StopLoss:    decimal.NewFromFloat(180.5),
-		TakeProfit:  decimal.NewFromFloat(500.5),
-		Profit:      decimal.NewFromFloat(150),
-	}
-	testShare = model.Share{
-		Company: "Apple",
-		Price:   195.5,
-	}
-	v = validator.New()
-)
+// var (
+// 	testUser = model.User{
+// 		ID:       uuid.New(),
+// 		Login:    "testLogin",
+// 		Password: "testPassword",
+// 	}
+// 	testBalance = model.Balance{
+// 		BalanceID: uuid.New(),
+// 		ProfileID: uuid.New(),
+// 		Operation: 637.81,
+// 	}
+// 	testDeal = model.Deal{
+// 		SharesCount: decimal.NewFromFloat(1.5),
+// 		Company:     "Apple",
+// 		StopLoss:    decimal.NewFromFloat(180.5),
+// 		TakeProfit:  decimal.NewFromFloat(500.5),
+// 		Profit:      decimal.NewFromFloat(150),
+// 	}
+// 	testShare = model.Share{
+// 		Company: "Apple",
+// 		Price:   195.5,
+// 	}
+// 	v = validator.New()
+// )
 
 // func TestSignUp(t *testing.T) {
 // 	srv := new(mocks.UserService)

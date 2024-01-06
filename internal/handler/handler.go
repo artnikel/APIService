@@ -90,6 +90,9 @@ func (h *Handler) Auth(c echo.Context) error {
 }
 
 func (h *Handler) Index(c echo.Context) error {
+	type PageData struct {
+		Shares []model.Share
+	}
 	tmpl, err := template.ParseFiles("templates/index/index.html")
 	if err != nil {
 		return echo.ErrNotFound
@@ -119,10 +122,17 @@ func (h *Handler) Index(c echo.Context) error {
 		logrus.Errorf("index %v", err)
 		return echo.ErrInternalServerError
 	}
+	shares, err := h.tradingService.GetPrices(c.Request().Context())
+	if err != nil {
+		logrus.Errorf("index %v", err)
+		return echo.ErrInternalServerError
+	}
 	return tmpl.ExecuteTemplate(c.Response().Writer, "index", struct {
 		Balance   float64
+		Shares PageData
 	}{
 		Balance:   balance,
+		Shares: PageData{Shares: shares},
 	})
 }
 
