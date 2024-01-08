@@ -84,6 +84,7 @@ func main() {
 	e.POST("/closeposition", hndl.ClosePositionManually)
 	e.GET("/getunclosed", hndl.GetUnclosedPositions)
 	e.GET("/getprices", hndl.GetPrices)
+	e.POST("/logout", hndl.Logout)
 	address := fmt.Sprintf(":%d", cfg.TradingAPIPort)
 	e.Logger.Fatal(e.Start(address))
 }

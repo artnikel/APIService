@@ -92,6 +92,7 @@ func (h *Handler) Auth(c echo.Context) error {
 func (h *Handler) Index(c echo.Context) error {
 	type PageData struct {
 		Shares []model.Share
+		Orders []*model.Deal
 	}
 	tmpl, err := template.ParseFiles("templates/index/index.html")
 	if err != nil {
@@ -127,12 +128,17 @@ func (h *Handler) Index(c echo.Context) error {
 		logrus.Errorf("index %v", err)
 		return echo.ErrInternalServerError
 	}
+	orders, err := h.tradingService.GetUnclosedPositions(c.Request().Context(),profileUUID)
+	if err != nil {
+		logrus.Errorf("index %v", err)
+		return echo.ErrInternalServerError
+	}
 	return tmpl.ExecuteTemplate(c.Response().Writer, "index", struct {
 		Balance   float64
-		Shares PageData
+		PageData PageData
 	}{
 		Balance:   balance,
-		Shares: PageData{Shares: shares},
+		PageData: PageData{Shares: shares, Orders: orders},
 	})
 }
 
@@ -479,4 +485,24 @@ func (h *Handler) GetPrices(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, "Handler-GetPrices: failed to get shares")
 	}
 	return c.JSON(http.StatusOK, shares)
+}
+
+func (h *Handler) Logout(c echo.Context) error {
+	store := NewRedisStore(h.cfg)
+	cookie, err := c.Cookie("SESSION_ID")
+	if err != nil {
+		logrus.Errorf("logout %v", err)
+		return echo.ErrUnauthorized
+	}
+	session, err := store.Get(c.Request(), cookie.Name)
+	if err != nil {
+		logrus.Errorf("logout %v", err)
+		return echo.ErrNotFound
+	}
+	session.Options.MaxAge = -1
+	if err = session.Save(c.Request(), c.Response().Writer); err != nil {
+		logrus.Errorf("logout %v", err)
+		return c.String(http.StatusBadRequest, "error saving session")
+	}
+	return c.Redirect(http.StatusSeeOther, "/")
 }
