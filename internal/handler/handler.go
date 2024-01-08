@@ -91,7 +91,6 @@ func (h *Handler) Auth(c echo.Context) error {
 
 func (h *Handler) Index(c echo.Context) error {
 	type PageData struct {
-		Shares []model.Share
 		Orders []*model.Deal
 	}
 	tmpl, err := template.ParseFiles("templates/index/index.html")
@@ -123,11 +122,6 @@ func (h *Handler) Index(c echo.Context) error {
 		logrus.Errorf("index %v", err)
 		return echo.ErrInternalServerError
 	}
-	shares, err := h.tradingService.GetPrices(c.Request().Context())
-	if err != nil {
-		logrus.Errorf("index %v", err)
-		return echo.ErrInternalServerError
-	}
 	orders, err := h.tradingService.GetUnclosedPositions(c.Request().Context(),profileUUID)
 	if err != nil {
 		logrus.Errorf("index %v", err)
@@ -138,7 +132,7 @@ func (h *Handler) Index(c echo.Context) error {
 		PageData PageData
 	}{
 		Balance:   balance,
-		PageData: PageData{Shares: shares, Orders: orders},
+		PageData: PageData{Orders: orders},
 	})
 }
 

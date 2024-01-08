@@ -17,8 +17,8 @@ type User struct {
 
 // Share is a struct for shares entity
 type Share struct {
-	Company string  `json:"company"`
-	Price   float64 `json:"price"`
+	Company string  `json:"company" form:"company"`
+	Price   float64 `json:"price" form:"price"`
 }
 
 // Balance contains an info about the balance and will be written in a balance table
