@@ -57,7 +57,7 @@ func NewHandler(userService UserService, balanceService BalanceService, tradingS
 		balanceService: balanceService,
 		tradingService: tradingService,
 		validate:       v,
-		cfg: cfg,
+		cfg:            cfg,
 	}
 }
 
@@ -81,6 +81,31 @@ type closeData struct {
 	DealID string `json:"dealid" form:"dealid" validate:"required,uuid"`
 }
 
+// getProfileID is method for getting id of profile from session
+func (h *Handler) getProfileID(c echo.Context) (uuid.UUID, error) {
+	cookie, err := c.Cookie("SESSION_ID")
+	if err != nil {
+		logrus.Errorf("getProfileID %v", err)
+		return uuid.Nil, c.Redirect(http.StatusSeeOther, "/")
+	}
+	store := NewRedisStore(h.cfg)
+	session, err := store.Get(c.Request(), cookie.Name)
+	if err != nil {
+		logrus.Errorf("getProfileID %v", err)
+		return uuid.Nil, echo.ErrNotFound
+	}
+	if len(session.Values) == 0 {
+		return uuid.Nil, c.Redirect(http.StatusSeeOther, "/")
+	}
+	profileid := session.Values["id"].(string)
+	profileUUID, err := uuid.Parse(profileid)
+	if err != nil {
+		logrus.Errorf("getProfileID %v", err)
+		return uuid.Nil, echo.ErrInternalServerError
+	}
+	return profileUUID, nil
+}
+
 func (h *Handler) Auth(c echo.Context) error {
 	tmpl, err := template.ParseFiles("templates/auth/auth.html")
 	if err != nil {
@@ -97,41 +122,25 @@ func (h *Handler) Index(c echo.Context) error {
 	if err != nil {
 		return echo.ErrNotFound
 	}
-	cookie, err := c.Cookie("SESSION_ID")
+	profileID, err := h.getProfileID(c)
 	if err != nil {
-		logrus.Errorf("index %v", err)
-		return c.Redirect(http.StatusSeeOther, "/")
+		return echo.ErrUnauthorized
 	}
-	store := NewRedisStore(h.cfg)
-	session, err := store.Get(c.Request(), cookie.Name)
-	if err != nil {
-		logrus.Errorf("index %v", err)
-		return echo.ErrNotFound
-	}
-	if len(session.Values) == 0 {
-		return c.Redirect(http.StatusSeeOther, "/")
-	}
-	profileid := session.Values["id"].(string)
-	profileUUID, err := uuid.Parse(profileid)
+	balance, err := h.balanceService.GetBalance(c.Request().Context(), profileID)
 	if err != nil {
 		logrus.Errorf("index %v", err)
 		return echo.ErrInternalServerError
 	}
-	balance, err := h.balanceService.GetBalance(c.Request().Context(),profileUUID)
-	if err != nil {
-		logrus.Errorf("index %v", err)
-		return echo.ErrInternalServerError
-	}
-	orders, err := h.tradingService.GetUnclosedPositions(c.Request().Context(),profileUUID)
+	orders, err := h.tradingService.GetUnclosedPositions(c.Request().Context(), profileID)
 	if err != nil {
 		logrus.Errorf("index %v", err)
 		return echo.ErrInternalServerError
 	}
 	return tmpl.ExecuteTemplate(c.Response().Writer, "index", struct {
-		Balance   float64
+		Balance  float64
 		PageData PageData
 	}{
-		Balance:   balance,
+		Balance:  balance,
 		PageData: PageData{Orders: orders},
 	})
 }
@@ -235,20 +244,19 @@ func (h *Handler) Login(c echo.Context) error {
 
 // DeleteAccount calls method of Service by handler
 func (h *Handler) DeleteAccount(c echo.Context) error {
-	authHeader := c.Request().Header.Get("Authorization")
-	id, err := h.balanceService.GetIDByToken(authHeader)
+	profileID, err := h.getProfileID(c)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-GetBalance-GetIDByToken: failed to get ID by token")
+		return echo.ErrUnauthorized
 	}
-	str, err := h.userService.DeleteAccount(c.Request().Context(), id)
+	_, err = h.userService.DeleteAccount(c.Request().Context(), profileID)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
-			"Id": id,
+			"Id": profileID,
 		}).Errorf("Handler-Refresh: error: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to delete")
 	}
-	return c.JSON(http.StatusOK, str)
+	return c.Redirect(http.StatusSeeOther, "/")
+	
 }
 
 // Deposit calls method of Service by handler
@@ -457,18 +465,16 @@ func (h *Handler) ClosePositionManually(c echo.Context) error {
 
 // GetUnclosedPositions calls method of Service by handler
 func (h *Handler) GetUnclosedPositions(c echo.Context) error {
-	authHeader := c.Request().Header.Get("Authorization")
-	profileid, err := h.balanceService.GetIDByToken(authHeader)
+	profileID, err := h.getProfileID(c)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-GetUnclosedPositions-GetIDByToken: failed to get ID by token")
+		return echo.ErrUnauthorized
 	}
-	unclosedDeals, err := h.tradingService.GetUnclosedPositions(c.Request().Context(), profileid)
+	unclosedPositions, err := h.tradingService.GetUnclosedPositions(c.Request().Context(), profileID)
 	if err != nil {
 		logrus.Errorf("error: %v", err)
 		return c.JSON(http.StatusBadRequest, "Handler-GetUnclosedPositions: failed to get unclosed positions")
 	}
-	return c.JSON(http.StatusOK, unclosedDeals)
+	return c.JSON(http.StatusOK, unclosedPositions)
 }
 
 // GetPrices calls method of Service by handler

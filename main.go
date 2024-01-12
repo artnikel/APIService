@@ -75,7 +75,7 @@ func main() {
 	e.GET("/index", hndl.Index)
 	e.POST("/signup", hndl.SignUp)
 	e.POST("/login", hndl.Login)
-	e.DELETE("/delete", hndl.DeleteAccount)
+	e.POST("/delete", hndl.DeleteAccount)
 	e.POST("/deposit", hndl.Deposit)
 	e.POST("/withdraw", hndl.Withdraw)
 	e.GET("/getbalance", hndl.GetBalance)

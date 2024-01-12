@@ -30,14 +30,14 @@ type Balance struct {
 
 // Deal is a struct for creating new deals
 type Deal struct {
-	DealID        uuid.UUID       `json:"dealid"`                         // id of deal - each deal have new id
-	SharesCount   decimal.Decimal `json:"sharescount"`                    // amount of shares of the selected transaction company
-	ProfileID     uuid.UUID       `json:"-" validate:"required,uuid"`     // id of user/profile
-	Company       string          `json:"company" validate:"required"`    // name of company in share
-	PurchasePrice decimal.Decimal `json:"purchaseprice"`                  // entry price in position
-	StopLoss      decimal.Decimal `json:"stoploss" validate:"required"`   // lower limit where the price can go
-	TakeProfit    decimal.Decimal `json:"takeprofit" validate:"required"` // upper limit where the price can go
-	DealTime      time.Time       `json:"dealtime"`                       // entry time in position
-	EndDealTime   time.Time       `json:"-"`                              // time of closing position
-	Profit        decimal.Decimal `json:"-"`                              // revenue of position
+	DealID        uuid.UUID       `json:"dealid" form:"dealid"`                             // id of deal - each deal have new id
+	SharesCount   decimal.Decimal `json:"sharescount" form:"sharescount"`                   // amount of shares of the selected transaction company
+	ProfileID     uuid.UUID       `json:"-" validate:"required,uuid"`                       // id of user/profile
+	Company       string          `json:"company" validate:"required" form:"company"`       // name of company in share
+	PurchasePrice decimal.Decimal `json:"purchaseprice" form:"purchaseprice"`               // entry price in position
+	StopLoss      decimal.Decimal `json:"stoploss" validate:"required" form:"stoploss"`     // lower limit where the price can go
+	TakeProfit    decimal.Decimal `json:"takeprofit" validate:"required" form:"takeprofit"` // upper limit where the price can go
+	DealTime      time.Time       `json:"dealtime" form:"dealtime"`                         // entry time in position
+	EndDealTime   time.Time       `json:"-"`                                                // time of closing position
+	Profit        decimal.Decimal `json:"-"`                                                // revenue of position
 }
