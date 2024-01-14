@@ -2,7 +2,7 @@ function updateShares(shares) {
   var tableBody = document.getElementById('shares-table-body');
   if (shares.length > 0) {
       var newHTML = shares.map(function(share) {
-          return '<tr><td>' + share.company + '</td><td>' + share.price + ' $</td></tr>';
+        return '<tr><td>' + share.company + '</td><td class="text-end">' + share.price + ' $</td></tr>';
       }).join('');
       tableBody.innerHTML = newHTML;
   } else {

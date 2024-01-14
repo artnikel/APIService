@@ -257,7 +257,7 @@ func (h *Handler) DeleteAccount(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to delete")
 	}
 	return c.HTML(http.StatusOK, `<script>alert('Your account has been successfully deleted!');
-	 window.location.href = '/index';</script>`)	
+	 window.location.href = '/';</script>`)	
 }
 
 // Deposit calls method of Service by handler
@@ -358,17 +358,17 @@ func (h *Handler) Long(c echo.Context) error {
 	if err != nil {
 		return echo.ErrUnauthorized
 	}
-	sharesCount, err := decimal.NewFromString(c.FormValue("longSharesCount"))
+	sharesCount, err := decimal.NewFromString(c.FormValue("sharescount"))
 	if err != nil {
 		logrus.Errorf("error: %v", err)
 		return c.JSON(http.StatusBadRequest, "Handler-Long: invalid request payload")
 	}
-	stopLoss, err := decimal.NewFromString(c.FormValue("longStopLoss"))
+	stopLoss, err := decimal.NewFromString(c.FormValue("stoploss"))
 	if err != nil {
 		logrus.Errorf("error: %v", err)
 		return c.JSON(http.StatusBadRequest, "Handler-Long: invalid request payload")
 	}
-	takeProfit, err := decimal.NewFromString(c.FormValue("longTakeProfit"))
+	takeProfit, err := decimal.NewFromString(c.FormValue("takeprofit"))
 	if err != nil {
 		logrus.Errorf("error: %v", err)
 		return c.JSON(http.StatusBadRequest, "Handler-Long: invalid request payload")
@@ -376,7 +376,7 @@ func (h *Handler) Long(c echo.Context) error {
 	deal := &model.Deal{
 		ProfileID:   profileID,
 		SharesCount: sharesCount,
-		Company:     c.FormValue("longCompany"),
+		Company:     c.FormValue("company"),
 		StopLoss:    stopLoss,
 		TakeProfit:  takeProfit,
 	}
@@ -385,7 +385,8 @@ func (h *Handler) Long(c echo.Context) error {
 		logrus.Errorf("error: %v", err)
 		return c.JSON(http.StatusBadRequest, "Handler-Long: failed to create position long")
 	}
-	return c.JSON(http.StatusOK, "Position long created.")
+	return c.HTML(http.StatusOK, `<script>alert('Position long created!');
+	 window.location.href = '/index';</script>`)	
 }
 
 // nolint dupl // in swagger can't bind two routers to one method

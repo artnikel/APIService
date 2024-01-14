@@ -218,13 +218,14 @@
             <thead>
                 <tr>
                     <th scope="col">Company</th>
-                    <th scope="col">Price</th>
+                    <th scope="col" class="text-end">Price</th>
                 </tr>
             </thead>
             <tbody id="shares-table-body">
             </tbody>        
         </table>
-    </div>
+      </div>
+    </main>
     <div class="modal fade" id="ordersModal" tabindex="-1" aria-labelledby="ordersModalLabel" aria-hidden="true">
       <div class="modal-dialog" style="max-width: 1200px;">
           <div class="modal-content">
@@ -279,27 +280,25 @@
                   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
-                  <form id="longForm">
-                      <div class="mb-3">
-                          <label for="sharesCount" class="form-label">Shares count</label>
-                          <input type="text" class="form-control" id="longsSharesCount" name="sharesCount">
-                      </div>
-                      <div class="mb-3">
-                          <label for="company" class="form-label">Company</label>
-                          <input type="text" class="form-control" id="lonCompany" name="company">
-                      </div>
-                      <div class="mb-3">
-                          <label for="stopLoss" class="form-label">Stop loss</label>
-                          <input type="text" class="form-control" id="longStopLoss" name="stopLoss">
-                      </div>
-                      <div class="mb-3">
-                          <label for="takeProfit" class="form-label">Take profit</label>
-                          <input type="text" class="form-control" id="longTakeProfit" name="takeProfit">
-                      </div>
-                      <form action="/long" method="POST">
-                        <button type="button" class="btn btn-primary">Open position</button>
-                      </form>
-                  </form>
+                <form id="longForm" action="/long" method="POST">
+                  <div class="mb-3">
+                      <label for="sharescount" class="form-label">Shares count</label>
+                      <input type="number" class="form-control" id="sharescount" name="sharescount" step="0.01" min="0.01" required>
+                  </div>
+                  <div class="mb-3">
+                      <label for="company" class="form-label">Company</label>
+                      <input type="text" class="form-control" id="company" name="company" required>
+                  </div>
+                  <div class="mb-3">
+                      <label for="stoploss" class="form-label">Stop loss</label>
+                      <input type="number" class="form-control" id="stoploss" name="stoploss" step="0.01" min="0.01" required>
+                  </div>
+                  <div class="mb-3">
+                      <label for="takeprofit" class="form-label">Take profit</label>
+                      <input type="number" class="form-control" id="takeprofit" name="takeprofit" step="0.01" min="0.01" required>
+                  </div>
+                  <button type="submit" class="btn btn-primary">Open position</button>
+                </form>              
               </div>
           </div>
       </div>
@@ -315,14 +314,13 @@
                 <form id="depositForm" action="/deposit" method="POST">
                     <div class="mb-3">
                         <label for="operation" class="form-label">Sum of money</label>
-                        <input type="number" class="form-control" id="operation" name="operation" step="0.1" min="0.1" required>
+                        <input type="number" class="form-control" id="operation" name="operation" step="0.01" min="0.01" required>
                     </div>
                       <button type="submit" class="btn btn-primary">Create deposit</button>
                 </form>
             </div>
         </div>
     </div>
-</main>
 </div>
 </div>
 <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
