@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"strconv"
 	"text/template"
 
 	"github.com/artnikel/APIService/internal/config"
@@ -255,43 +256,26 @@ func (h *Handler) DeleteAccount(c echo.Context) error {
 		}).Errorf("Handler-Refresh: error: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to delete")
 	}
-	return c.Redirect(http.StatusSeeOther, "/")
-	
+	return c.HTML(http.StatusOK, `<script>alert('Your account has been successfully deleted!');
+	 window.location.href = '/index';</script>`)	
 }
 
 // Deposit calls method of Service by handler
 func (h *Handler) Deposit(c echo.Context) error {
-	var (
-		operation   float64
-		requestData = model.Balance{
-			Operation: operation,
-		}
-		operationType = "Deposit"
-		output        = func(money float64) string {
-			return fmt.Sprintf("%s of %.2f successfully made.", operationType, math.Abs(money))
-		}
-	)
-	err := c.Bind(&requestData)
+	profileID, err := h.getProfileID(c)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Deposit: invalid request payload")
+		return echo.ErrUnauthorized
 	}
-	err = h.validate.VarCtx(c.Request().Context(), requestData.Operation, "required,gt=0")
+	sumOfMoney, err := strconv.ParseFloat(c.FormValue("operation"), 64)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Deposit: failed to validate operation")
-	}
-	authHeader := c.Request().Header.Get("Authorization")
-	profileid, err := h.balanceService.GetIDByToken(authHeader)
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Deposit-GetIDByToken: failed to get ID by token")
+		logrus.Errorf("Handler-Deposit: error: %v", err)
+		return c.String(http.StatusBadRequest, "invalid sum of money")
 	}
 	balance := model.Balance{
-		ProfileID: profileid,
-		Operation: requestData.Operation,
+		ProfileID: profileID,
+		Operation: sumOfMoney,
 	}
-	money, err := h.balanceService.BalanceOperation(c.Request().Context(), &balance)
+	_, err = h.balanceService.BalanceOperation(c.Request().Context(), &balance)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
 			"BalanceId": balance.BalanceID,
@@ -300,7 +284,8 @@ func (h *Handler) Deposit(c echo.Context) error {
 		}).Errorf("Handler-Deposit: error: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Handler-Deposit: failed to made balance operation")
 	}
-	return c.JSON(http.StatusOK, output(money))
+	return c.HTML(http.StatusOK, `<script>alert('Deposit of " + fmt.Sprintf("%.2f", sumOfMoney) + "$ approved!');
+	 window.location.href = '/index';</script>`)
 }
 
 // Withdraw calls method of Service by handler
@@ -369,29 +354,31 @@ func (h *Handler) GetBalance(c echo.Context) error {
 // nolint dupl // in swagger can't bind two routers to one method
 // Long calls method of Service by handler
 func (h *Handler) Long(c echo.Context) error {
-	authHeader := c.Request().Header.Get("Authorization")
-	profileid, err := h.balanceService.GetIDByToken(authHeader)
+	profileID, err := h.getProfileID(c)
+	if err != nil {
+		return echo.ErrUnauthorized
+	}
+	sharesCount, err := decimal.NewFromString(c.FormValue("longSharesCount"))
 	if err != nil {
 		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Long-GetIDByToken: failed to get ID by token")
+		return c.JSON(http.StatusBadRequest, "Handler-Long: invalid request payload")
 	}
-	var requestData dealData
-	err = c.Bind(&requestData)
+	stopLoss, err := decimal.NewFromString(c.FormValue("longStopLoss"))
+	if err != nil {
+		logrus.Errorf("error: %v", err)
+		return c.JSON(http.StatusBadRequest, "Handler-Long: invalid request payload")
+	}
+	takeProfit, err := decimal.NewFromString(c.FormValue("longTakeProfit"))
 	if err != nil {
 		logrus.Errorf("error: %v", err)
 		return c.JSON(http.StatusBadRequest, "Handler-Long: invalid request payload")
 	}
 	deal := &model.Deal{
-		ProfileID:   profileid,
-		SharesCount: decimal.NewFromFloat(requestData.SharesCount),
-		Company:     requestData.Company,
-		StopLoss:    decimal.NewFromFloat(requestData.StopLoss),
-		TakeProfit:  decimal.NewFromFloat(requestData.TakeProfit),
-	}
-	err = h.validate.StructCtx(c.Request().Context(), requestData)
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Long: failed to validate operation")
+		ProfileID:   profileID,
+		SharesCount: sharesCount,
+		Company:     c.FormValue("longCompany"),
+		StopLoss:    stopLoss,
+		TakeProfit:  takeProfit,
 	}
 	err = h.tradingService.CreatePosition(c.Request().Context(), deal)
 	if err != nil {

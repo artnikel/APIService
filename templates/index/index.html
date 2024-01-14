@@ -139,10 +139,10 @@
 
           <ul class="nav flex-column">
             <li class="nav-item">
-              <a class="nav-link d-flex align-items-center gap-2 active" aria-current="page" href="/index">
+              <button class="nav-link d-flex align-items-center gap-2" id="openLongModal" data-bs-toggle="modal" data-bs-target="#longModal">
                 <i class="bi bi-graph-up-arrow"></i>
                 Long
-              </a>
+              </button>
             </li>
             <li class="nav-item">
               <button class="nav-link d-flex align-items-center gap-2" id="openOrdersModal" data-bs-toggle="modal" data-bs-target="#ordersModal">
@@ -161,12 +161,12 @@
           </h6>
           <ul class="nav flex-column mb-auto">
             <li class="nav-item">
-              <a class="nav-link d-flex align-items-center gap-2" href="#">
+              <button class="nav-link d-flex align-items-center gap-2"  id="openDepositModal" data-bs-toggle="modal" data-bs-target="#depositModal">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
                   <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
                 </svg>
                 Deposit
-              </a>
+              </button>
             </li>
             <li class="nav-item">
               <a class="nav-link d-flex align-items-center gap-2" href="#">
@@ -204,7 +204,6 @@
         </div>
       </div>
     </div>
-
     <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
       <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom" bis_skin_checked="1">
         <h1 class="h2">
@@ -272,8 +271,59 @@
         </div>
       </div>
     </div>
-    </main>
+    <div class="modal fade" id="longModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+          <div class="modal-content">
+              <div class="modal-header">
+                  <h5 class="modal-title" id="exampleModalLabel">Fill the fields.</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                  <form id="longForm">
+                      <div class="mb-3">
+                          <label for="sharesCount" class="form-label">Shares count</label>
+                          <input type="text" class="form-control" id="longsSharesCount" name="sharesCount">
+                      </div>
+                      <div class="mb-3">
+                          <label for="company" class="form-label">Company</label>
+                          <input type="text" class="form-control" id="lonCompany" name="company">
+                      </div>
+                      <div class="mb-3">
+                          <label for="stopLoss" class="form-label">Stop loss</label>
+                          <input type="text" class="form-control" id="longStopLoss" name="stopLoss">
+                      </div>
+                      <div class="mb-3">
+                          <label for="takeProfit" class="form-label">Take profit</label>
+                          <input type="text" class="form-control" id="longTakeProfit" name="takeProfit">
+                      </div>
+                      <form action="/long" method="POST">
+                        <button type="button" class="btn btn-primary">Open position</button>
+                      </form>
+                  </form>
+              </div>
+          </div>
+      </div>
   </div>
+  <div class="modal fade" id="depositModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Fill the fields.</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="depositForm" action="/deposit" method="POST">
+                    <div class="mb-3">
+                        <label for="operation" class="form-label">Sum of money</label>
+                        <input type="number" class="form-control" id="operation" name="operation" step="0.1" min="0.1" required>
+                    </div>
+                      <button type="submit" class="btn btn-primary">Create deposit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
+</div>
 </div>
 <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
