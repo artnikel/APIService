@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math"
 	"net/http"
 	"strconv"
 	"text/template"
@@ -68,18 +67,6 @@ func NewRedisStore(cfg config.Variables) *redistore.RediStore {
 		log.Fatalf("Failed to create redis store: %v", err)
 	}
 	return store
-}
-
-// dealData is a struct for binding new deal.
-type dealData struct {
-	SharesCount float64 `json:"sharescount" form:"sharescount" validate:"required"`
-	Company     string  `json:"company" form:"company" validate:"required"`
-	StopLoss    float64 `json:"stoploss" form:"stoploss" validate:"required"`
-	TakeProfit  float64 `json:"takeprofit" form:"takeprofit" validate:"required"`
-}
-
-type closeData struct {
-	DealID string `json:"dealid" form:"dealid" validate:"required,uuid"`
 }
 
 // getProfileID is method for getting id of profile from session
@@ -257,7 +244,7 @@ func (h *Handler) DeleteAccount(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to delete")
 	}
 	return c.HTML(http.StatusOK, `<script>alert('Your account has been successfully deleted!');
-	 window.location.href = '/';</script>`)	
+	 window.location.href = '/';</script>`)
 }
 
 // Deposit calls method of Service by handler
@@ -284,44 +271,27 @@ func (h *Handler) Deposit(c echo.Context) error {
 		}).Errorf("Handler-Deposit: error: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Handler-Deposit: failed to made balance operation")
 	}
-	return c.HTML(http.StatusOK, `<script>alert('Deposit of " + fmt.Sprintf("%.2f", sumOfMoney) + "$ approved!');
-	 window.location.href = '/index';</script>`)
+	return c.HTML(http.StatusOK, `<script>alert('Deposit of `+ fmt.Sprintf("%.2f", sumOfMoney) +
+		`$ approved!'); window.location.href = '/index';</script>`)
 }
 
 // Withdraw calls method of Service by handler
 func (h *Handler) Withdraw(c echo.Context) error {
-	var (
-		operation   float64
-		requestData = model.Balance{
-			Operation: operation,
-		}
-		operationType = "Withdraw"
-		output        = func(money float64) string {
-			return fmt.Sprintf("%s of %.2f successfully made.", operationType, math.Abs(money))
-		}
-	)
-	err := c.Bind(&requestData)
+	profileID, err := h.getProfileID(c)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Withdraw: invalid request payload")
+		return echo.ErrUnauthorized
 	}
-	err = h.validate.VarCtx(c.Request().Context(), requestData.Operation, "required,gt=0")
+	sumOfMoney, err := strconv.ParseFloat(c.FormValue("operation"), 64)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Withdraw: failed to validate operation")
-	}
-	authHeader := c.Request().Header.Get("Authorization")
-	profileid, err := h.balanceService.GetIDByToken(authHeader)
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Withdraw-GetIDByToken: failed to get ID by token")
+		logrus.Errorf("Handler-Deposit: error: %v", err)
+		return c.String(http.StatusBadRequest, "invalid sum of money")
 	}
 	balance := model.Balance{
-		ProfileID: profileid,
-		Operation: requestData.Operation,
+		ProfileID: profileID,
+		Operation: sumOfMoney,
 	}
 	balance.Operation = -balance.Operation
-	money, err := h.balanceService.BalanceOperation(c.Request().Context(), &balance)
+	_, err = h.balanceService.BalanceOperation(c.Request().Context(), &balance)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
 			"BalanceId": balance.BalanceID,
@@ -330,7 +300,8 @@ func (h *Handler) Withdraw(c echo.Context) error {
 		}).Errorf("Handler-Withdraw: error: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Handler-Withdraw: failed to made balance operation")
 	}
-	return c.JSON(http.StatusOK, output(money))
+	return c.HTML(http.StatusOK, `<script>alert('Withdraw of `+ fmt.Sprintf("%.2f", sumOfMoney) +
+		`$ approved!'); window.location.href = '/index';</script>`)
 }
 
 // GetBalance calls method of Service by handler
@@ -351,9 +322,8 @@ func (h *Handler) GetBalance(c echo.Context) error {
 	return c.JSON(http.StatusOK, fmt.Sprintf("Balance: %f", money))
 }
 
-// nolint dupl // in swagger can't bind two routers to one method
-// Long calls method of Service by handler
-func (h *Handler) Long(c echo.Context) error {
+// CreatePosition calls method of Service by handler
+func (h *Handler) CreatePosition(c echo.Context) error {
 	profileID, err := h.getProfileID(c)
 	if err != nil {
 		return echo.ErrUnauthorized
@@ -361,17 +331,21 @@ func (h *Handler) Long(c echo.Context) error {
 	sharesCount, err := decimal.NewFromString(c.FormValue("sharescount"))
 	if err != nil {
 		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Long: invalid request payload")
+		return c.JSON(http.StatusBadRequest, "Handler-CreatePosition: invalid request payload")
 	}
 	stopLoss, err := decimal.NewFromString(c.FormValue("stoploss"))
 	if err != nil {
 		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Long: invalid request payload")
+		return c.JSON(http.StatusBadRequest, "Handler-CreatePosition: invalid request payload")
 	}
 	takeProfit, err := decimal.NewFromString(c.FormValue("takeprofit"))
 	if err != nil {
 		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Long: invalid request payload")
+		return c.JSON(http.StatusBadRequest, "Handler-CreatePosition: invalid request payload")
+	}
+	strategy := "long"
+	if stopLoss.Cmp(takeProfit) == 1 {
+		strategy = "short"
 	}
 	deal := &model.Deal{
 		ProfileID:   profileID,
@@ -383,72 +357,30 @@ func (h *Handler) Long(c echo.Context) error {
 	err = h.tradingService.CreatePosition(c.Request().Context(), deal)
 	if err != nil {
 		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Long: failed to create position long")
+		return c.JSON(http.StatusBadRequest, "Handler-CreatePosition: failed to create position long")
 	}
-	return c.HTML(http.StatusOK, `<script>alert('Position long created!');
-	 window.location.href = '/index';</script>`)	
-}
-
-// nolint dupl // in swagger can't bind two routers to one method
-// Short calls method of Service by handler
-func (h *Handler) Short(c echo.Context) error {
-	authHeader := c.Request().Header.Get("Authorization")
-	profileid, err := h.balanceService.GetIDByToken(authHeader)
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Short-GetIDByToken: failed to get ID by token")
-	}
-	var requestData dealData
-	err = c.Bind(&requestData)
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Short: invalid request payload")
-	}
-	deal := &model.Deal{
-		ProfileID:   profileid,
-		SharesCount: decimal.NewFromFloat(requestData.SharesCount),
-		Company:     requestData.Company,
-		StopLoss:    decimal.NewFromFloat(requestData.StopLoss),
-		TakeProfit:  decimal.NewFromFloat(requestData.TakeProfit),
-	}
-	err = h.validate.StructCtx(c.Request().Context(), requestData)
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Short: failed to validate operation")
-	}
-	err = h.tradingService.CreatePosition(c.Request().Context(), deal)
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Short: failed to create position short")
-	}
-	return c.JSON(http.StatusOK, "Position short created.")
+	return c.HTML(http.StatusOK, `<script>alert('Position ` + strategy + ` created!');
+	 window.location.href = '/index';</script>`)
 }
 
 // ClosePositionManually calls method of Service by handler
 func (h *Handler) ClosePositionManually(c echo.Context) error {
-	authHeader := c.Request().Header.Get("Authorization")
-	profileid, err := h.balanceService.GetIDByToken(authHeader)
+	profileID, err := h.getProfileID(c)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-ClosePositionManually-GetIDByToken: failed to get ID by token")
+		return echo.ErrUnauthorized
 	}
-	var requestData closeData
-	err = c.Bind(&requestData)
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-ClosePositionManually: invalid request payload")
-	}
-	dealUUID, err := uuid.Parse(requestData.DealID)
+	dealUUID, err := uuid.Parse(c.FormValue("dealid"))
 	if err != nil {
 		logrus.Errorf("error: %v", err)
 		return c.JSON(http.StatusBadRequest, "Handler-ClosePositionManually: failed to parse id")
 	}
-	profit, err := h.tradingService.ClosePositionManually(c.Request().Context(), dealUUID, profileid)
+	profit, err := h.tradingService.ClosePositionManually(c.Request().Context(), dealUUID, profileID)
 	if err != nil {
 		logrus.Errorf("error: %v", err)
 		return c.JSON(http.StatusBadRequest, "Handler-ClosePositionManually: failed to close position")
 	}
-	return c.JSON(http.StatusOK, fmt.Sprintf("Position closed with profit %f", profit))
+	return c.HTML(http.StatusOK, `<script>alert('Position closed with profit ` + fmt.Sprintf("%.2f", profit) + `');
+	 window.location.href = '/index';</script>`)
 }
 
 // GetUnclosedPositions calls method of Service by handler

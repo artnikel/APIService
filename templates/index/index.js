@@ -33,24 +33,26 @@ document.getElementById('openOrdersModal').addEventListener('click', function() 
 });
 
 function updateUnclosedPositions(positions) {
-        var tableBody = document.getElementById('unclosed-positions-table-body');
-        if (positions.length > 0) {
-            var newHTML = positions.map(function(position) {
-                return '<tr>' +
-                    '<td>' + position.DealID + '</td>' +
-                    '<td>' + position.SharesCount + '</td>' +
-                    '<td>' + position.Company + '</td>' +
-                    '<td>' + position.PurchasePrice + '$</td>' +
-                    '<td>' + position.StopLoss + '$</td>' +
-                    '<td>' + position.TakeProfit + '$</td>' +
-                    '<td>' + position.DealTime + '</td>' +
-                    '</tr>';
-            }).join('');
-            tableBody.innerHTML = newHTML;
-        } else {
-            tableBody.innerHTML = '<br><p>No unclosed positions available.</p>';
-        }
+    var tableBody = document.getElementById('unclosed-positions-table-body');
+    if (positions.length > 0) {
+        var newHTML = positions.map(function (position) {
+            return '<tr>' +
+                '<td>' + (position.dealid || '') + '</td>' +
+                '<td>' + (position.sharescount || '') + '</td>' +
+                '<td>' + (position.company || '') + '</td>' +
+                '<td>' + (position.purchaseprice ? position.purchaseprice + '$' : '') + '</td>' +
+                '<td>' + (position.stoploss ? position.stoploss + '$' : '') + '</td>' +
+                '<td>' + (position.takeprofit ? position.takeprofit + '$' : '') + '</td>' +
+                '<td>' + (position.dealtime || '') + '</td>' +
+                '<td><button class="copy-btn" data-clipboard-text="' + (position.dealid || '') + '">Copy ID</button></td>' +
+                '</tr>';
+        }).join('');
+        tableBody.innerHTML = newHTML;
+    } else {
+        tableBody.innerHTML = '<br><p>No unclosed positions available.</p>';
+    }
 }
+
 
 function fetchUnclosedPositions() {
   var currentTime = new Date();
