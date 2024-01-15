@@ -64,7 +64,7 @@ func NewHandler(userService UserService, balanceService BalanceService, tradingS
 func NewRedisStore(cfg config.Variables) *redistore.RediStore {
 	store, err := redistore.NewRediStore(10, "tcp", cfg.RedisPriceAddress, "", []byte(cfg.TokenSignature))
 	if err != nil {
-		log.Fatalf("Failed to create redis store: %v", err)
+		log.Fatalf("failed to create redis store: %v", err)
 	}
 	return store
 }
@@ -73,13 +73,13 @@ func NewRedisStore(cfg config.Variables) *redistore.RediStore {
 func (h *Handler) getProfileID(c echo.Context) (uuid.UUID, error) {
 	cookie, err := c.Cookie("SESSION_ID")
 	if err != nil {
-		logrus.Errorf("getProfileID %v", err)
+		logrus.Errorf("getProfileID: %v", err)
 		return uuid.Nil, c.Redirect(http.StatusSeeOther, "/")
 	}
 	store := NewRedisStore(h.cfg)
 	session, err := store.Get(c.Request(), cookie.Name)
 	if err != nil {
-		logrus.Errorf("getProfileID %v", err)
+		logrus.Errorf("getProfileID: %v", err)
 		return uuid.Nil, echo.ErrNotFound
 	}
 	if len(session.Values) == 0 {
@@ -88,7 +88,7 @@ func (h *Handler) getProfileID(c echo.Context) (uuid.UUID, error) {
 	profileid := session.Values["id"].(string)
 	profileUUID, err := uuid.Parse(profileid)
 	if err != nil {
-		logrus.Errorf("getProfileID %v", err)
+		logrus.Errorf("getProfileID: %v", err)
 		return uuid.Nil, echo.ErrInternalServerError
 	}
 	return profileUUID, nil
@@ -116,12 +116,12 @@ func (h *Handler) Index(c echo.Context) error {
 	}
 	balance, err := h.balanceService.GetBalance(c.Request().Context(), profileID)
 	if err != nil {
-		logrus.Errorf("index %v", err)
+		logrus.Errorf("index: %v", err)
 		return echo.ErrInternalServerError
 	}
 	orders, err := h.tradingService.GetUnclosedPositions(c.Request().Context(), profileID)
 	if err != nil {
-		logrus.Errorf("index %v", err)
+		logrus.Errorf("index: %v", err)
 		return echo.ErrInternalServerError
 	}
 	return tmpl.ExecuteTemplate(c.Response().Writer, "index", struct {
@@ -151,14 +151,14 @@ func (h *Handler) SignUp(c echo.Context) error {
 		logrus.WithFields(logrus.Fields{
 			"Login":    user.Login,
 			"Password": user.Password,
-		}).Errorf("signUp %v", err)
+		}).Errorf("signUp: %v", err)
 		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
 			"errorMsg": "The fields have not been validated",
 		})
 	}
 	err = h.userService.SignUp(c.Request().Context(), &user)
 	if err != nil {
-		logrus.Errorf("signUp %v", err)
+		logrus.Errorf("signUp: %v", err)
 		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
 			"errorMsg": "Failed to sign up",
 		})
@@ -166,21 +166,25 @@ func (h *Handler) SignUp(c echo.Context) error {
 	user.Password = tempPassword
 	userID, err := h.userService.GetByLogin(c.Request().Context(), &user)
 	if err != nil {
-		logrus.Errorf("signUp %v", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to log in")
+		logrus.Errorf("signUp: %v", err)
+		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
+			"errorMsg": "Failed to log in",
+		})
 	}
 	store := NewRedisStore(h.cfg)
 	session, err := store.Get(c.Request(), "SESSION_ID")
 	if err != nil {
-		logrus.Errorf("signUp %v", err)
+		logrus.Errorf("signUp: %v", err)
 		return echo.ErrNotFound
 	}
 	session.Values["id"] = userID.String()
 	session.Values["login"] = user.Login
 	session.Values["password"] = user.Password
 	if err = session.Save(c.Request(), c.Response()); err != nil {
-		logrus.Errorf("signUp %v", err)
-		return echo.NewHTTPError(http.StatusBadRequest, "error saving session")
+		logrus.Errorf("signUp: %v", err)
+		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
+			"errorMsg": "Error saving session",
+		})
 	}
 	return c.Redirect(http.StatusSeeOther, "/index")
 }
@@ -202,14 +206,14 @@ func (h *Handler) Login(c echo.Context) error {
 		logrus.WithFields(logrus.Fields{
 			"Login":    user.Login,
 			"Password": user.Password,
-		}).Errorf("login %v", err)
+		}).Errorf("login: %v", err)
 		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
 			"errorMsg": "The fields have not been validated",
 		})
 	}
 	userID, err := h.userService.GetByLogin(c.Request().Context(), &user)
 	if err != nil {
-		logrus.Errorf("login %v", err)
+		logrus.Errorf("login: %v", err)
 		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
 			"errorMsg": "Wrong login or password",
 		})
@@ -217,15 +221,17 @@ func (h *Handler) Login(c echo.Context) error {
 	store := NewRedisStore(h.cfg)
 	session, err := store.Get(c.Request(), "SESSION_ID")
 	if err != nil {
-		logrus.Errorf("login %v", err)
+		logrus.Errorf("login: %v", err)
 		return echo.ErrNotFound
 	}
 	session.Values["id"] = userID.String()
 	session.Values["login"] = user.Login
 	session.Values["password"] = user.Password
 	if err = session.Save(c.Request(), c.Response().Writer); err != nil {
-		logrus.Errorf("login %v", err)
-		return c.String(http.StatusBadRequest, "error saving session")
+		logrus.Errorf("login: %v", err)
+		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
+			"errorMsg": "Error saving session",
+		})
 	}
 	return c.Redirect(http.StatusSeeOther, "/index")
 }
@@ -239,9 +245,10 @@ func (h *Handler) DeleteAccount(c echo.Context) error {
 	_, err = h.userService.DeleteAccount(c.Request().Context(), profileID)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
-			"Id": profileID,
-		}).Errorf("Handler-Refresh: error: %v", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to delete")
+			"ID": profileID,
+		}).Errorf("deleteAccount: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to delete your account');
+		window.location.href = '/index';</script>`)
 	}
 	return c.HTML(http.StatusOK, `<script>alert('Your account has been successfully deleted!');
 	 window.location.href = '/';</script>`)
@@ -255,8 +262,9 @@ func (h *Handler) Deposit(c echo.Context) error {
 	}
 	sumOfMoney, err := strconv.ParseFloat(c.FormValue("operation"), 64)
 	if err != nil {
-		logrus.Errorf("Handler-Deposit: error: %v", err)
-		return c.String(http.StatusBadRequest, "invalid sum of money")
+		logrus.Errorf("deposit: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Invalid sum of money');
+		window.location.href = '/index';</script>`)
 	}
 	balance := model.Balance{
 		ProfileID: profileID,
@@ -268,8 +276,9 @@ func (h *Handler) Deposit(c echo.Context) error {
 			"BalanceId": balance.BalanceID,
 			"ProfileId": balance.ProfileID,
 			"Operation": balance.Operation,
-		}).Errorf("Handler-Deposit: error: %v", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "Handler-Deposit: failed to made balance operation")
+		}).Errorf("deposit: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to made balance operation');
+		 window.location.href = '/index';</script>`)
 	}
 	return c.HTML(http.StatusOK, `<script>alert('Deposit of `+ fmt.Sprintf("%.2f", sumOfMoney) +
 		`$ approved!'); window.location.href = '/index';</script>`)
@@ -283,8 +292,9 @@ func (h *Handler) Withdraw(c echo.Context) error {
 	}
 	sumOfMoney, err := strconv.ParseFloat(c.FormValue("operation"), 64)
 	if err != nil {
-		logrus.Errorf("Handler-Deposit: error: %v", err)
-		return c.String(http.StatusBadRequest, "invalid sum of money")
+		logrus.Errorf("withdraw: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Invalid sum of money');
+		window.location.href = '/index';</script>`)
 	}
 	balance := model.Balance{
 		ProfileID: profileID,
@@ -297,29 +307,12 @@ func (h *Handler) Withdraw(c echo.Context) error {
 			"BalanceId": balance.BalanceID,
 			"ProfileId": balance.ProfileID,
 			"Operation": balance.Operation,
-		}).Errorf("Handler-Withdraw: error: %v", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "Handler-Withdraw: failed to made balance operation")
+		}).Errorf("withdraw: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to made balance operation');
+		 window.location.href = '/index';</script>`)
 	}
 	return c.HTML(http.StatusOK, `<script>alert('Withdraw of `+ fmt.Sprintf("%.2f", sumOfMoney) +
 		`$ approved!'); window.location.href = '/index';</script>`)
-}
-
-// GetBalance calls method of Service by handler
-func (h *Handler) GetBalance(c echo.Context) error {
-	authHeader := c.Request().Header.Get("Authorization")
-	profileid, err := h.balanceService.GetIDByToken(authHeader)
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-GetBalance-GetIDByToken: failed to get ID by token")
-	}
-	money, err := h.balanceService.GetBalance(c.Request().Context(), profileid)
-	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"ProfileId": profileid,
-		}).Errorf("Handler-GetBalance: error: %v", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get balance")
-	}
-	return c.JSON(http.StatusOK, fmt.Sprintf("Balance: %f", money))
 }
 
 // CreatePosition calls method of Service by handler
@@ -330,18 +323,21 @@ func (h *Handler) CreatePosition(c echo.Context) error {
 	}
 	sharesCount, err := decimal.NewFromString(c.FormValue("sharescount"))
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-CreatePosition: invalid request payload")
+		logrus.Errorf("createPosition: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Invalid shares count value');
+		 window.location.href = '/index';</script>`)
 	}
 	stopLoss, err := decimal.NewFromString(c.FormValue("stoploss"))
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-CreatePosition: invalid request payload")
+		logrus.Errorf("createPosition: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Invalid stop loss value');
+		 window.location.href = '/index';</script>`)
 	}
 	takeProfit, err := decimal.NewFromString(c.FormValue("takeprofit"))
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-CreatePosition: invalid request payload")
+		logrus.Errorf("createPosition: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Invalid take profit value');
+		 window.location.href = '/index';</script>`)
 	}
 	strategy := "long"
 	if stopLoss.Cmp(takeProfit) == 1 {
@@ -356,8 +352,9 @@ func (h *Handler) CreatePosition(c echo.Context) error {
 	}
 	err = h.tradingService.CreatePosition(c.Request().Context(), deal)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-CreatePosition: failed to create position long")
+		logrus.Errorf("createPosition: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to create position');
+		 window.location.href = '/index';</script>`)
 	}
 	return c.HTML(http.StatusOK, `<script>alert('Position ` + strategy + ` created!');
 	 window.location.href = '/index';</script>`)
@@ -371,13 +368,15 @@ func (h *Handler) ClosePositionManually(c echo.Context) error {
 	}
 	dealUUID, err := uuid.Parse(c.FormValue("dealid"))
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-ClosePositionManually: failed to parse id")
+		logrus.Errorf("closePositionManually: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to parse deal ID');
+		 window.location.href = '/index';</script>`)
 	}
 	profit, err := h.tradingService.ClosePositionManually(c.Request().Context(), dealUUID, profileID)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-ClosePositionManually: failed to close position")
+		logrus.Errorf("closePositionManually: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to close position');
+		 window.location.href = '/index';</script>`)
 	}
 	return c.HTML(http.StatusOK, `<script>alert('Position closed with profit ` + fmt.Sprintf("%.2f", profit) + `');
 	 window.location.href = '/index';</script>`)
@@ -391,8 +390,9 @@ func (h *Handler) GetUnclosedPositions(c echo.Context) error {
 	}
 	unclosedPositions, err := h.tradingService.GetUnclosedPositions(c.Request().Context(), profileID)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-GetUnclosedPositions: failed to get unclosed positions")
+		logrus.Errorf("getUnclosedPositions: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to get positions');
+		 window.location.href = '/index';</script>`)
 	}
 	return c.JSON(http.StatusOK, unclosedPositions)
 }
@@ -401,28 +401,33 @@ func (h *Handler) GetUnclosedPositions(c echo.Context) error {
 func (h *Handler) GetPrices(c echo.Context) error {
 	shares, err := h.tradingService.GetPrices(c.Request().Context())
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-GetPrices: failed to get shares")
+		logrus.Errorf("getPrices: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to get shares');
+		 window.location.href = '/index';</script>`)
 	}
 	return c.JSON(http.StatusOK, shares)
 }
 
+// Logout delete session of user
 func (h *Handler) Logout(c echo.Context) error {
 	store := NewRedisStore(h.cfg)
 	cookie, err := c.Cookie("SESSION_ID")
 	if err != nil {
 		logrus.Errorf("logout %v", err)
-		return echo.ErrUnauthorized
+		return c.HTML(http.StatusInternalServerError, `<script>alert('Failed to get cookie');
+		window.location.href = '/';</script>`)
 	}
 	session, err := store.Get(c.Request(), cookie.Name)
 	if err != nil {
 		logrus.Errorf("logout %v", err)
-		return echo.ErrNotFound
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to get your session');
+		window.location.href = '/';</script>`)
 	}
 	session.Options.MaxAge = -1
 	if err = session.Save(c.Request(), c.Response().Writer); err != nil {
 		logrus.Errorf("logout %v", err)
-		return c.String(http.StatusBadRequest, "error saving session")
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to log out');
+		 window.location.href = '/index';</script>`)
 	}
 	return c.Redirect(http.StatusSeeOther, "/")
 }

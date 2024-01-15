@@ -78,7 +78,6 @@ func main() {
 	e.POST("/delete", hndl.DeleteAccount)
 	e.POST("/deposit", hndl.Deposit)
 	e.POST("/withdraw", hndl.Withdraw)
-	e.GET("/getbalance", hndl.GetBalance)
 	e.POST("/long", hndl.CreatePosition)
 	e.POST("/short", hndl.CreatePosition)
 	e.POST("/closeposition", hndl.ClosePositionManually)
