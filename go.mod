@@ -3,9 +3,9 @@ module github.com/artnikel/APIService
 go 1.20
 
 require (
-	github.com/artnikel/BalanceService v0.0.0-20230811103249-6b708502953c
+	github.com/artnikel/BalanceService v0.0.0-20231201121556-96082b27c7c0
 	github.com/artnikel/ProfileService v0.0.0-20230808132859-2285d2c82607
-	github.com/artnikel/TradingService v0.0.0-20230903182357-31c1d80619b7
+	github.com/artnikel/TradingService v0.0.0-20240116152142-90ccd9622510
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/go-playground/validator/v10 v10.15.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
@@ -16,7 +16,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/crypto v0.12.0
 	google.golang.org/grpc v1.57.0
-	google.golang.org/protobuf v1.30.0
+	google.golang.org/protobuf v1.32.0
 	gopkg.in/boj/redistore.v1 v1.0.0-20160128113310-fc113767cd6b
 )
 

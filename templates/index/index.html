@@ -79,9 +79,6 @@
 
 <header class="navbar sticky-top bg-dark flex-md-nowrap p-0 shadow" data-bs-theme="dark">
   <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 fs-6 text-white" href="/index">
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-house" viewBox="0 0 16 16">
-      <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L2 8.207V13.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V8.207l.646.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293zM13 7.207V13.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V7.207l5-5z"/>
-    </svg>
      Trading Platform
     </a>
   <ul class="navbar-nav flex-row d-md-none">
@@ -99,7 +96,7 @@
     <div class="sidebar border border-right col-md-3 col-lg-2 p-0 bg-body-tertiary" bis_skin_checked="1">
       <div class="offcanvas-md offcanvas-end bg-body-tertiary" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel" bis_skin_checked="1">
         <div class="offcanvas-header" bis_skin_checked="1">
-          <h5 class="offcanvas-title" id="sidebarMenuLabel">Company name</h5>
+          <h5 class="offcanvas-title" id="sidebarMenuLabel">Trading Platform</h5>
           <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#sidebarMenu" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body d-md-flex flex-column p-0 pt-lg-3 overflow-y-auto" bis_skin_checked="1">
@@ -166,6 +163,29 @@
 
           <hr class="my-3">
 
+          <ul class="nav flex-column mb-auto">
+            <li class="nav-item">
+              <button class="nav-link d-flex align-items-center gap-2"  id="openHistoryModal" data-bs-toggle="modal" data-bs-target="#historyModal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock-history" viewBox="0 0 16 16">
+                  <path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022zm2.004.45a7 7 0 0 0-.985-.299l.219-.976q.576.129 1.126.342zm1.37.71a7 7 0 0 0-.439-.27l.493-.87a8 8 0 0 1 .979.654l-.615.789a7 7 0 0 0-.418-.302zm1.834 1.79a7 7 0 0 0-.653-.796l.724-.69q.406.429.747.91zm.744 1.352a7 7 0 0 0-.214-.468l.893-.45a8 8 0 0 1 .45 1.088l-.95.313a7 7 0 0 0-.179-.483m.53 2.507a7 7 0 0 0-.1-1.025l.985-.17q.1.58.116 1.17zm-.131 1.538q.05-.254.081-.51l.993.123a8 8 0 0 1-.23 1.155l-.964-.267q.069-.247.12-.501m-.952 2.379q.276-.436.486-.908l.914.405q-.24.54-.555 1.038zm-.964 1.205q.183-.183.35-.378l.758.653a8 8 0 0 1-.401.432z"/>
+                  <path d="M8 1a7 7 0 1 0 4.95 11.95l.707.707A8.001 8.001 0 1 1 8 0z"/>
+                  <path d="M7.5 3a.5.5 0 0 1 .5.5v5.21l3.248 1.856a.5.5 0 0 1-.496.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5"/>
+                </svg>
+                History
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link d-flex align-items-center gap-2" id="openAboutModal" data-bs-toggle="modal" data-bs-target="#aboutModal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-book" viewBox="0 0 16 16">
+                  <path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811zm7.5-.141c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783"/>
+                </svg>
+                About
+              </button>
+            </li>
+          </ul>
+
+          <hr class="my-3">
+
           <ul class="nav flex-column mb-2">
             <li class="nav-item">
               <form action="/logout" method="post">
@@ -207,11 +227,11 @@
     </div>
     <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
       <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom" bis_skin_checked="1">
-        <h1 class="h2">
-         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-broadcast" viewBox="0 0 16 16"> 
-            <path d="M3.05 3.05a7 7 0 0 0 0 9.9.5.5 0 0 1-.707.707 8 8 0 0 1 0-11.314.5.5 0 0 1 .707.707m2.122 2.122a4 4 0 0 0 0 5.656.5.5 0 1 1-.708.708 5 5 0 0 1 0-7.072.5.5 0 0 1 .708.708m5.656-.708a.5.5 0 0 1 .708 0 5 5 0 0 1 0 7.072.5.5 0 1 1-.708-.708 4 4 0 0 0 0-5.656.5.5 0 0 1 0-.708m2.122-2.12a.5.5 0 0 1 .707 0 8 8 0 0 1 0 11.313.5.5 0 0 1-.707-.707 7 7 0 0 0 0-9.9.5.5 0 0 1 0-.707zM10 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0"></path>
+        <h1>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-broadcast-pin" viewBox="0 0 16 16">
+            <path d="M3.05 3.05a7 7 0 0 0 0 9.9.5.5 0 0 1-.707.707 8 8 0 0 1 0-11.314.5.5 0 0 1 .707.707m2.122 2.122a4 4 0 0 0 0 5.656.5.5 0 1 1-.708.708 5 5 0 0 1 0-7.072.5.5 0 0 1 .708.708m5.656-.708a.5.5 0 0 1 .708 0 5 5 0 0 1 0 7.072.5.5 0 1 1-.708-.708 4 4 0 0 0 0-5.656.5.5 0 0 1 0-.708m2.122-2.12a.5.5 0 0 1 .707 0 8 8 0 0 1 0 11.313.5.5 0 0 1-.707-.707 7 7 0 0 0 0-9.9.5.5 0 0 1 0-.707zM6 8a2 2 0 1 1 2.5 1.937V15.5a.5.5 0 0 1-1 0V9.937A2 2 0 0 1 6 8"/>
           </svg>
-          Live Prices
+          Live prices
         </h1>
       </div>
       <div class="table-responsive small" bis_skin_checked="1">
@@ -242,12 +262,41 @@
                               <th>Shares count</th>
                               <th>Company</th>
                               <th>Purchase price</th>
-                              <th>Stop loss</th>
-                              <th>Take profit</th>
-                              <th>Deal time</th>
+                              <th>Stop-loss</th>
+                              <th>Take-profit</th>
+                              <th>Deal-time</th>
                           </tr>
                       </thead>
                       <tbody id="unclosed-positions-table-body">
+                      </tbody>
+                  </table>
+              </div>
+          </div>
+      </div>
+    </div>
+    <div class="modal fade" id="historyModal" tabindex="-1" aria-labelledby="historyModalLabel" aria-hidden="true">
+      <div class="modal-dialog" style="max-width: 1400px;">
+          <div class="modal-content">
+              <div class="modal-header">
+                  <h5 class="modal-title" id="historyModalLabel">Your positions history</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body" style="font-size: 14px;">
+                  <table class="table table-striped">
+                      <thead>
+                          <tr>
+                              <th>Deal ID</th>
+                              <th>Shares count</th>
+                              <th>Company</th>
+                              <th>Purchase price</th>
+                              <th>Stop-loss</th>
+                              <th>Take-profit</th>
+                              <th>Deal-time</th>
+                              <th>Profit</th>
+                              <th>End deal-time</th>
+                          </tr>
+                      </thead>
+                      <tbody id="closed-positions-table-body">
                       </tbody>
                   </table>
               </div>
@@ -273,6 +322,22 @@
         </div>
       </div>
     </div>
+    <div class="modal fade" id="aboutModal" tabindex="-1" role="dialog" aria-labelledby="aboutModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document" style="max-width: 600px;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title delete-link" id="aboutModalLabel">About the terms</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p>• A <strong>long</strong> position is used when a profit is expected from the growth of a shares.</p>    
+            <p>• A <strong>short</strong> position is opened in the hope of profiting from a fall in shares.</p>
+            <p>• <strong>Stop-loss</strong> is the lower value of share when the position is closed to cut the loss.</p>
+            <p>• <strong>Take-profit</strong> is the upper value at which the position is closed to make an instant profit.</p>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="modal fade" id="longModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
       <div class="modal-dialog">
           <div class="modal-content">
@@ -280,7 +345,7 @@
                   <h5 class="modal-title" id="exampleModalLabel">Fill the fields</h5>
                   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
-              <div class="modal-body">
+              <div class="modal-body">             
                 <form id="longForm" action="/long" method="POST">
                   <div class="mb-3">
                       <label for="company" class="form-label">Company</label>
@@ -291,11 +356,11 @@
                     <input type="number" class="form-control" id="sharescount" name="sharescount" step="0.01" min="0.01" required>
                 </div>
                   <div class="mb-3">
-                      <label for="stoploss" class="form-label">Stop loss</label>
+                      <label for="stoploss" class="form-label">Stop-loss ($)</label>
                       <input type="number" class="form-control" id="stoploss" name="stoploss" step="0.01" min="0.01" required>
                   </div>
                   <div class="mb-3">
-                      <label for="takeprofit" class="form-label">Take profit</label>
+                      <label for="takeprofit" class="form-label">Take-profit ($)</label>
                       <input type="number" class="form-control" id="takeprofit" name="takeprofit" step="0.01" min="0.01" required>
                   </div>
                   <button type="submit" class="btn btn-primary">Open position</button>
@@ -322,11 +387,11 @@
                   <input type="number" class="form-control" id="sharescount" name="sharescount" step="0.01" min="0.01" required>
               </div>
                 <div class="mb-3">
-                    <label for="stoploss" class="form-label">Stop loss</label>
+                    <label for="stoploss" class="form-label">Stop-loss ($)</label>
                     <input type="number" class="form-control" id="stoploss" name="stoploss" step="0.01" min="0.01" required>
                 </div>
                 <div class="mb-3">
-                    <label for="takeprofit" class="form-label">Take profit</label>
+                    <label for="takeprofit" class="form-label">Take-profit ($)</label>
                     <input type="number" class="form-control" id="takeprofit" name="takeprofit" step="0.01" min="0.01" required>
                 </div>
                 <button type="submit" class="btn btn-primary">Open position</button>
@@ -345,7 +410,7 @@
             <div class="modal-body">
                 <form id="depositForm" action="/deposit" method="POST">
                     <div class="mb-3">
-                        <label for="operation" class="form-label">Sum of money</label>
+                        <label for="operation" class="form-label">Sum of money ($)</label>
                         <input type="number" class="form-control" id="operation" name="operation" step="0.01" min="0.01" required>
                     </div>
                       <button type="submit" class="btn btn-primary">Create deposit</button>
@@ -364,7 +429,7 @@
               <div class="modal-body">
                   <form id="withdrawForm" action="/withdraw" method="POST">
                       <div class="mb-3">
-                          <label for="operation" class="form-label">Sum of money</label>
+                          <label for="operation" class="form-label">Sum of money ($)</label>
                           <input type="number" class="form-control" id="operation" name="operation" step="0.01" min="0.01" required>
                       </div>
                         <button type="submit" class="btn btn-primary">Create withdraw</button>

@@ -38,6 +38,6 @@ type Deal struct {
 	StopLoss      decimal.Decimal `json:"stoploss" validate:"required" form:"stoploss"`     // lower limit where the price can go
 	TakeProfit    decimal.Decimal `json:"takeprofit" validate:"required" form:"takeprofit"` // upper limit where the price can go
 	DealTime      time.Time       `json:"dealtime" form:"dealtime"`                         // entry time in position
-	EndDealTime   time.Time       `json:"-"`                                                // time of closing position
-	Profit        decimal.Decimal `json:"-"`                                                // revenue of position
+	EndDealTime   time.Time       `json:"enddealtime" form:"enddealtime"`                   // time of closing position
+	Profit        decimal.Decimal `json:"profit" form:"profit"`                             // revenue of position
 }

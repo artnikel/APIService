@@ -38,6 +38,7 @@ type TradingService interface {
 	CreatePosition(ctx context.Context, deal *model.Deal) error
 	ClosePositionManually(ctx context.Context, dealid, profileid uuid.UUID) (float64, error)
 	GetUnclosedPositions(ctx context.Context, profileid uuid.UUID) ([]*model.Deal, error)
+	GetClosedPositions(ctx context.Context, profileid uuid.UUID) ([]*model.Deal, error)
 	GetPrices(ctx context.Context) ([]model.Share, error)
 }
 
@@ -395,6 +396,21 @@ func (h *Handler) GetUnclosedPositions(c echo.Context) error {
 		 window.location.href = '/index';</script>`)
 	}
 	return c.JSON(http.StatusOK, unclosedPositions)
+}
+
+// GetClosedPositions calls method of Service by handler
+func (h *Handler) GetClosedPositions(c echo.Context) error {
+	profileID, err := h.getProfileID(c)
+	if err != nil {
+		return echo.ErrUnauthorized
+	}
+	closedPositions, err := h.tradingService.GetClosedPositions(c.Request().Context(), profileID)
+	if err != nil {
+		logrus.Errorf("getClosedPositions: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to get positions');
+		 window.location.href = '/index';</script>`)
+	}
+	return c.JSON(http.StatusOK, closedPositions)
 }
 
 // GetPrices calls method of Service by handler
