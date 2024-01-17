@@ -18,11 +18,11 @@ toggleButton.addEventListener("click", function () {
     isLoginMode = !isLoginMode; 
     if (isLoginMode) {
         authForm.action = "/login";
-        authButton.textContent = "Login";
-        toggleButton.textContent = "Switch to Sign Up";
+        authButton.textContent = "Log in";
+        toggleButton.textContent = "Switch to Sign up";
     } else {
         authForm.action = "/signup";
-        authButton.textContent = "Sign Up";
-        toggleButton.textContent = "Switch to Login";
+        authButton.textContent = "Sign up";
+        toggleButton.textContent = "Switch to Log in";
     }
 });

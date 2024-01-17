@@ -32,8 +32,8 @@ function fetchDataAndLog(tableBody) {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-  var longTable = document.getElementById('long-shares-table'); // Исправлено
-  var shortTable = document.getElementById('short-shares-table'); // Исправлено
+  var longTable = document.getElementById('long-shares-table'); 
+  var shortTable = document.getElementById('short-shares-table'); 
   var modalTable = document.getElementById('modal-shares-table');
   var modalLong = new bootstrap.Modal(document.getElementById('longModal'));
   var modalShort = new bootstrap.Modal(document.getElementById('shortModal'));
