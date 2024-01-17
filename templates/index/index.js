@@ -1,48 +1,96 @@
 function updateShares(tableBody, shares) {
-    if (shares.length > 0) {
-      var newHTML = shares.map(function(share) {
-        return '<tr><td>' + share.company + '</td><td class="text-end">' + share.price + ' $</td></tr>';
-      }).join('');
+  if (shares.length > 0) {
+      var newHTML = '<thead style="font-size: 19px;">' +
+                      '<tr>' +
+                        '<th scope="col">Company</th>' +
+                        '<th scope="col" class="text-end">Price</th>' +
+                      '</tr>' +
+                    '</thead>' +
+                    '<tbody>' +
+                      shares.map(function (share) {
+                        return '<tr><td>' + share.company + '</td><td class="text-end">' + share.price + ' $</td></tr>';
+                      }).join('') +
+                    '</tbody>';
       tableBody.innerHTML = newHTML;
-    } else {
+  } else {
       tableBody.innerHTML = '<p>No shares available.</p>';
-    }
+  }
 }
 
 function fetchDataAndLog(tableBody) {
-    var currentTime = new Date();
-    console.log('Fetching data at', currentTime);
-    fetch('/getprices')
+  var currentTime = new Date();
+  console.log('Fetching data at', currentTime);
+  fetch('/getprices')
       .then(response => response.json())
       .then(data => {
-        console.log('Received data at', new Date(), ':', data);
-        updateShares(tableBody, data);
+          console.log('Received data at', new Date(), ':', data);
+          updateShares(tableBody, data);
       })
       .catch(error => {
-        console.error('Error updating shares at', new Date(), ':', error);
+          console.error('Error updating shares at', new Date(), ':', error);
       });
 }
 
-function toggleTableVisibility() {
-    var checkbox = document.getElementById('showTableCheckbox');
-    var table = document.getElementById('livePricesTable');
-    var tableBody = document.getElementById('shares-table-body');
+document.addEventListener("DOMContentLoaded", function () {
+  var longTable = document.getElementById('long-shares-table'); // Исправлено
+  var shortTable = document.getElementById('short-shares-table'); // Исправлено
+  var modalTable = document.getElementById('modal-shares-table');
+  var modalLong = new bootstrap.Modal(document.getElementById('longModal'));
+  var modalShort = new bootstrap.Modal(document.getElementById('shortModal'));
 
-    if (checkbox.checked) {
-      table.style.display = 'block';
-      fetchDataAndLog(tableBody);
-    } else {
-      table.style.display = 'none';
+  var shouldShowModalTable = true;
+
+  modalLong._element.addEventListener('hidden.bs.modal', function () {
+    if (!shouldShowModalTable) {
+      modalTable.classList.add('d-none');
     }
-}
+  });
 
-document.addEventListener("DOMContentLoaded", function() {
-    var tableBody = document.getElementById('shares-table-body');
+  modalShort._element.addEventListener('hidden.bs.modal', function () {
+    if (!shouldShowModalTable) {
+      modalTable.classList.add('d-none');
+    }
+  });
+
+  modalLong._element.addEventListener('shown.bs.modal', function () {
+    if (shouldShowModalTable) {
+      modalTable.classList.remove('d-none');
+      fetchDataAndLog(longTable);
+    }
+  });
+
+  modalShort._element.addEventListener('shown.bs.modal', function () {
+    if (shouldShowModalTable) {
+      modalTable.classList.remove('d-none');
+      fetchDataAndLog(shortTable);
+    }
+  });
+
+  window.addEventListener('click', function (event) {
+    var modalElementLong = document.getElementById('longModal'); 
+    var modalElementShort = document.getElementById('shortModal'); 
+
+    if (event.target == modalElementLong && shouldShowModalTable) {
+      modalLong.hide();
+    }
+
+    if (event.target == modalElementShort && shouldShowModalTable) {
+      modalShort.hide();
+    }
+  });
+
+  var tableBody = document.getElementById('shares-table-body');
+  fetchDataAndLog(tableBody);
+
+  setInterval(function () {
     fetchDataAndLog(tableBody);
-    setInterval(function() {
-      fetchDataAndLog(tableBody);
-    }, 3000);
+    if (shouldShowModalTable) {
+      fetchDataAndLog(longTable);
+      fetchDataAndLog(shortTable);
+    }
+  }, 3000);
 });
+
 
 document.getElementById('openOrdersModal').addEventListener('click', function() {
   fetchUnclosedPositions(); 
