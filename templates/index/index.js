@@ -88,7 +88,7 @@ document.addEventListener("DOMContentLoaded", function () {
       fetchDataAndLog(longTable);
       fetchDataAndLog(shortTable);
     }
-  }, 3000);
+  }, 1500);
 });
 
 
@@ -112,13 +112,30 @@ function updateUnclosedPositions(positions) {
                 '<td>' + (position.stoploss ? position.stoploss + '$' : '') + '</td>' +
                 '<td>' + (position.takeprofit ? position.takeprofit + '$' : '') + '</td>' +
                 '<td>' + (position.dealtime ? formatTimeString(position.dealtime) : '') + '</td>' +
-                '<td><button class="copy-btn" data-clipboard-text="' + (position.dealid || '') + '">Copy ID</button></td>' +
+                '<td><button class="copy-btn" data-dealid="' + (position.dealid || '') + '">Copy ID</button></td>' +
                 '</tr>';
         }).join('');
         tableBody.innerHTML = newHTML;
+        var copyButtons = document.querySelectorAll('.copy-btn');
+        copyButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                var dealId = button.getAttribute('data-dealid');
+                copyToClipboard(dealId);
+            });
+        });
     } else {
         tableBody.innerHTML = '<br><p>No unclosed positions available</p>';
     }
+}
+
+async function copyToClipboard(text) {
+  try {
+      await navigator.clipboard.writeText(text);
+      alert('Deal ID copied to clipboard: ' + text);
+  } catch (err) {
+      console.error('Unable to copy to clipboard', err);
+      alert('Unable to copy to clipboard. Please try again.');
+  }
 }
 
 
@@ -194,6 +211,32 @@ function formatTimeString(timeString) {
     return formattedTime;
 }
 
+function validateForm(positionType) {
+  var stopLossInput = document.getElementById(positionType === 'long' ? 'stoplossLong' : 'stoplossShort');
+  var takeProfitInput = document.getElementById(positionType === 'long' ? 'takeprofitLong' : 'takeprofitShort');
+
+  if (!isValidNumericInput(stopLossInput) || !isValidNumericInput(takeProfitInput)) {
+      alert("Please enter valid numeric values for stop-loss and take-profit");
+      return false;
+  }
+
+  var stopLoss = parseFloat(stopLossInput.value);
+  var takeProfit = parseFloat(takeProfitInput.value);
+
+  if (positionType === "long" && stopLoss >= takeProfit) {
+      alert("Stop-loss should be less than take-profit");
+      return false; 
+  } else if (positionType === "short" && takeProfit >= stopLoss) {
+      alert("Take-profit should be less than stop-loss");
+      return false; 
+  }
+  return true; 
+}
+
+function isValidNumericInput(inputElement) {
+  var value = inputElement.value.trim();
+  return value !== "" && !isNaN(parseFloat(value)) && isFinite(value);
+}
 
 
 
