@@ -35,13 +35,14 @@ const (
 
 // SignUp is a method of UserService that hashed password and calls method of Repository
 func (us *UserService) SignUp(ctx context.Context, user *model.User) error {
-	var err error
-	user.Password, err = us.GenerateHash(user.Password)
-	if err != nil {
-		return fmt.Errorf("generateHash %w", err)
+	var errHash error
+	user.Password, errHash = us.GenerateHash(user.Password)
+	if errHash != nil {
+		return fmt.Errorf("generateHash %w", errHash)
 	}
-	err = us.uRep.SignUp(ctx, user)
+	err := us.uRep.SignUp(ctx, user)
 	if err != nil {
+
 		return fmt.Errorf("signUp %w", err)
 	}
 	return nil

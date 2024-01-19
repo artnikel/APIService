@@ -4,11 +4,10 @@ go 1.20
 
 require (
 	github.com/artnikel/BalanceService v0.0.0-20231201121556-96082b27c7c0
-	github.com/artnikel/ProfileService v0.0.0-20230808132859-2285d2c82607
+	github.com/artnikel/ProfileService v0.0.0-20240119122408-1f6e2576bba3
 	github.com/artnikel/TradingService v0.0.0-20240116152142-90ccd9622510
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/go-playground/validator/v10 v10.15.0
-	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.3.0
 	github.com/labstack/echo/v4 v4.11.1
 	github.com/shopspring/decimal v1.3.1
@@ -22,6 +21,7 @@ require (
 
 require (
 	github.com/garyburd/redigo v1.6.4 // indirect
+	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/gorilla/sessions v1.2.2 // indirect

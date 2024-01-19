@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	berrors "github.com/artnikel/APIService/internal/errors"
 	"github.com/artnikel/APIService/internal/model"
 	tproto "github.com/artnikel/TradingService/proto"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -40,6 +42,13 @@ func (r *TradingRepository) CreatePosition(ctx context.Context, deal *model.Deal
 		},
 	})
 	if err != nil {
+		grpcStatus, ok := status.FromError(err)
+		if ok && grpcStatus.Message() == berrors.NotEnoughMoney {
+			return berrors.New(berrors.NotEnoughMoney, "Not enough money")
+		}
+		if ok && grpcStatus.Message() == berrors.PurchasePriceOut {
+			return berrors.New(berrors.PurchasePriceOut, "Purchase price out of stoploss/takeprofit")
+		}
 		return fmt.Errorf("createPosition %w", err)
 	}
 	return nil

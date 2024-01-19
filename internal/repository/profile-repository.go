@@ -5,9 +5,11 @@ import (
 	"context"
 	"fmt"
 
+	berrors "github.com/artnikel/APIService/internal/errors"
 	"github.com/artnikel/APIService/internal/model"
 	uproto "github.com/artnikel/ProfileService/proto"
 	"github.com/google/uuid"
+	"google.golang.org/grpc/status"
 )
 
 // ProfileRepository represents the client of UserService repository implementation.
@@ -29,6 +31,10 @@ func (p *ProfileRepository) SignUp(ctx context.Context, user *model.User) error 
 		Password: string(user.Password),
 	}})
 	if err != nil {
+		grpcStatus, ok := status.FromError(err)
+		if ok && grpcStatus.Message() == berrors.LoginAlreadyExist {
+			return berrors.New(berrors.LoginAlreadyExist, "Login is occupied by another user")
+		}
 		return fmt.Errorf("signUp %w", err)
 	}
 	return nil
@@ -51,6 +57,10 @@ func (p *ProfileRepository) GetByLogin(ctx context.Context, login string) ([]byt
 func (p *ProfileRepository) DeleteAccount(ctx context.Context, id uuid.UUID) (string, error) {
 	resp, err := p.client.DeleteAccount(ctx, &uproto.DeleteAccountRequest{Id: id.String()})
 	if err != nil {
+		grpcStatus, ok := status.FromError(err)
+		if ok && grpcStatus.Message() == berrors.UserDoesntExists {
+			return "", berrors.New(berrors.LoginAlreadyExist, "User doesnt exist")
+		}
 		return "", fmt.Errorf("deleteAccount %w", err)
 	}
 	return resp.Id, nil

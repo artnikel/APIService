@@ -3,6 +3,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"text/template"
 
 	"github.com/artnikel/APIService/internal/config"
+	berrors "github.com/artnikel/APIService/internal/errors"
 	"github.com/artnikel/APIService/internal/model"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -30,7 +32,6 @@ type UserService interface {
 type BalanceService interface {
 	BalanceOperation(ctx context.Context, balance *model.Balance) (float64, error)
 	GetBalance(ctx context.Context, profileid uuid.UUID) (float64, error)
-	GetIDByToken(authHeader string) (uuid.UUID, error)
 }
 
 // TradingService is an interface that defines the method on Trading entity.
@@ -143,7 +144,7 @@ func (h *Handler) SignUp(c echo.Context) error {
 	var user model.User
 	if err := c.Bind(&user); err != nil {
 		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
-			"errorMsg": "Failed to bind fields",
+			"errorMsg": "Failed to read fields",
 		})
 	}
 	tempPassword := user.Password
@@ -159,6 +160,12 @@ func (h *Handler) SignUp(c echo.Context) error {
 	}
 	err = h.userService.SignUp(c.Request().Context(), &user)
 	if err != nil {
+		var e *berrors.BusinessError
+		if errors.As(err, &e) {
+			return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
+				"errorMsg": e.Message,
+			})
+		}
 		logrus.Errorf("signUp: %v", err)
 		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
 			"errorMsg": "Failed to sign up",
@@ -245,6 +252,11 @@ func (h *Handler) DeleteAccount(c echo.Context) error {
 	}
 	_, err = h.userService.DeleteAccount(c.Request().Context(), profileID)
 	if err != nil {
+		var e *berrors.BusinessError
+		if errors.As(err, &e) {
+			return c.HTML(http.StatusBadRequest, `<script>alert('`+ e.Message +`');
+			window.location.href = '/';</script>`)
+		}
 		logrus.WithFields(logrus.Fields{
 			"ID": profileID,
 		}).Errorf("deleteAccount: %v", err)
@@ -281,7 +293,7 @@ func (h *Handler) Deposit(c echo.Context) error {
 		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to made balance operation');
 		 window.location.href = '/index';</script>`)
 	}
-	return c.HTML(http.StatusOK, `<script>alert('Deposit of `+ fmt.Sprintf("%.2f", sumOfMoney) +
+	return c.HTML(http.StatusOK, `<script>alert('Deposit of `+fmt.Sprintf("%.2f", sumOfMoney)+
 		`$ approved!'); window.location.href = '/index';</script>`)
 }
 
@@ -304,6 +316,11 @@ func (h *Handler) Withdraw(c echo.Context) error {
 	balance.Operation = -balance.Operation
 	_, err = h.balanceService.BalanceOperation(c.Request().Context(), &balance)
 	if err != nil {
+		var e *berrors.BusinessError
+		if errors.As(err, &e) {
+			return c.HTML(http.StatusBadRequest, `<script>alert('`+ e.Message +`');
+			window.location.href = '/index';</script>`)
+		}
 		logrus.WithFields(logrus.Fields{
 			"BalanceId": balance.BalanceID,
 			"ProfileId": balance.ProfileID,
@@ -312,7 +329,7 @@ func (h *Handler) Withdraw(c echo.Context) error {
 		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to made balance operation');
 		 window.location.href = '/index';</script>`)
 	}
-	return c.HTML(http.StatusOK, `<script>alert('Withdraw of `+ fmt.Sprintf("%.2f", sumOfMoney) +
+	return c.HTML(http.StatusOK, `<script>alert('Withdraw of `+fmt.Sprintf("%.2f", sumOfMoney)+
 		`$ approved!'); window.location.href = '/index';</script>`)
 }
 
@@ -353,11 +370,16 @@ func (h *Handler) CreatePosition(c echo.Context) error {
 	}
 	err = h.tradingService.CreatePosition(c.Request().Context(), deal)
 	if err != nil {
+		var e *berrors.BusinessError
+		if errors.As(err, &e) {
+			return c.HTML(http.StatusBadRequest, `<script>alert('`+ e.Message +`');
+			window.location.href = '/index';</script>`)
+		}
 		logrus.Errorf("createPosition: %v", err)
 		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to create position');
 		 window.location.href = '/index';</script>`)
 	}
-	return c.HTML(http.StatusOK, `<script>alert('Position ` + strategy + ` created!');
+	return c.HTML(http.StatusOK, `<script>alert('Position `+ strategy +` created!');
 	 window.location.href = '/index';</script>`)
 }
 
@@ -379,7 +401,7 @@ func (h *Handler) ClosePositionManually(c echo.Context) error {
 		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to close position');
 		 window.location.href = '/index';</script>`)
 	}
-	return c.HTML(http.StatusOK, `<script>alert('Position closed with profit ` + fmt.Sprintf("%.2f", profit) + `');
+	return c.HTML(http.StatusOK, `<script>alert('Position closed with profit `+fmt.Sprintf("%.2f", profit)+`');
 	 window.location.href = '/index';</script>`)
 }
 
