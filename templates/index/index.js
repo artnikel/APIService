@@ -1,5 +1,19 @@
 function updateShares(tableBody, shares) {
-  if (shares.length > 0) {
+  console.log('UpdateShares - tableBody:', tableBody);
+  console.log('UpdateShares - shares:', shares);
+
+  try {
+    // Ensure tableBody is a valid element
+    if (!tableBody || !(tableBody instanceof HTMLElement)) {
+      throw new Error('Invalid table body.');
+    }
+
+    // Ensure shares is an array
+    if (!Array.isArray(shares)) {
+      throw new Error('Shares data is not an array.');
+    }
+
+    if (shares.length > 0) {
       var newHTML = '<thead style="font-size: 19px;">' +
                       '<tr>' +
                         '<th scope="col">Company</th>' +
@@ -12,29 +26,41 @@ function updateShares(tableBody, shares) {
                       }).join('') +
                     '</tbody>';
       tableBody.innerHTML = newHTML;
-  } else {
-      tableBody.innerHTML = '<p>No shares available.</p>';
+    } else {
+      tableBody.innerHTML = '<p>No shares available</p>';
+    }
+  } catch (error) {
+    console.error('Error in updateShares:', error.message);
   }
 }
 
-function fetchDataAndLog(tableBody) {
+function fetchDataAndLog(tableBodies) {
   var currentTime = new Date();
   console.log('Fetching data at', currentTime);
+
   fetch('/getprices')
-      .then(response => response.json())
-      .then(data => {
-          console.log('Received data at', new Date(), ':', data);
-          updateShares(tableBody, data);
-      })
-      .catch(error => {
-          console.error('Error updating shares at', new Date(), ':', error);
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Received data at', new Date(), ':', data);
+      tableBodies.forEach(tableBody => {
+        console.log('Updating shares for table:', tableBody);
+        updateShares(tableBody, data);
       });
+    })
+    .catch(error => {
+      console.error('Error fetching data:', error);
+    });
 }
 
 document.addEventListener("DOMContentLoaded", function () {
   var longTable = document.getElementById('long-shares-table'); 
   var shortTable = document.getElementById('short-shares-table'); 
-  var modalTable = document.getElementById('modal-shares-table');
+  var modalTable = document.getElementById('shares-table-body');
   var modalLong = new bootstrap.Modal(document.getElementById('longModal'));
   var modalShort = new bootstrap.Modal(document.getElementById('shortModal'));
 
@@ -55,14 +81,14 @@ document.addEventListener("DOMContentLoaded", function () {
   modalLong._element.addEventListener('shown.bs.modal', function () {
     if (shouldShowModalTable) {
       modalTable.classList.remove('d-none');
-      fetchDataAndLog(longTable);
+      fetchDataAndLog([longTable, modalTable, shortTable]);
     }
   });
 
   modalShort._element.addEventListener('shown.bs.modal', function () {
     if (shouldShowModalTable) {
       modalTable.classList.remove('d-none');
-      fetchDataAndLog(shortTable);
+      fetchDataAndLog([shortTable, modalTable, longTable]);
     }
   });
 
@@ -80,14 +106,10 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   var tableBody = document.getElementById('shares-table-body');
-  fetchDataAndLog(tableBody);
+  fetchDataAndLog([tableBody, longTable, shortTable, modalTable]);
 
   setInterval(function () {
-    fetchDataAndLog(tableBody);
-    if (shouldShowModalTable) {
-      fetchDataAndLog(longTable);
-      fetchDataAndLog(shortTable);
-    }
+    fetchDataAndLog([tableBody, longTable, shortTable, modalTable]);
   }, 1500);
 });
 
