@@ -63,7 +63,9 @@ func NewHandler(userService UserService, balanceService BalanceService, tradingS
 	}
 }
 
+// NewRedisStore creates a new Redis storage instance for sessions
 func NewRedisStore(cfg config.Variables) *redistore.RediStore {
+	// nolint gonmd
 	store, err := redistore.NewRediStore(10, "tcp", cfg.RedisPriceAddress, "", []byte(cfg.TokenSignature))
 	if err != nil {
 		log.Fatalf("failed to create redis store: %v", err)
@@ -96,6 +98,7 @@ func (h *Handler) getProfileID(c echo.Context) (uuid.UUID, error) {
 	return profileUUID, nil
 }
 
+// Auth is endpoint for auth page
 func (h *Handler) Auth(c echo.Context) error {
 	tmpl, err := template.ParseFiles("templates/auth/auth.html")
 	if err != nil {
@@ -104,6 +107,7 @@ func (h *Handler) Auth(c echo.Context) error {
 	return tmpl.ExecuteTemplate(c.Response().Writer, "auth", nil)
 }
 
+// Index is endpoint for main page
 func (h *Handler) Index(c echo.Context) error {
 	type PageData struct {
 		Orders []*model.Deal
@@ -142,7 +146,7 @@ func (h *Handler) SignUp(c echo.Context) error {
 		return echo.ErrNotFound
 	}
 	var user model.User
-	if err := c.Bind(&user); err != nil {
+	if errBind := c.Bind(&user); errBind != nil {
 		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
 			"errorMsg": "Failed to read fields",
 		})
@@ -155,7 +159,7 @@ func (h *Handler) SignUp(c echo.Context) error {
 			"Password": user.Password,
 		}).Errorf("signUp: %v", err)
 		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
-			"errorMsg": "The fields have not been validated",
+			"errorMsg": "Invalid fields! The fields have not been validated",
 		})
 	}
 	err = h.userService.SignUp(c.Request().Context(), &user)
@@ -204,9 +208,9 @@ func (h *Handler) Login(c echo.Context) error {
 		return echo.ErrNotFound
 	}
 	var user model.User
-	if err := c.Bind(&user); err != nil {
+	if errBind := c.Bind(&user); errBind != nil {
 		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
-			"errorMsg": "Failed to bind fields",
+			"errorMsg": "Failed to read fields",
 		})
 	}
 	err = h.validate.StructCtx(c.Request().Context(), user)
@@ -216,7 +220,7 @@ func (h *Handler) Login(c echo.Context) error {
 			"Password": user.Password,
 		}).Errorf("login: %v", err)
 		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
-			"errorMsg": "The fields have not been validated",
+			"errorMsg": "Invalid fields! The fields have not been validated",
 		})
 	}
 	userID, err := h.userService.GetByLogin(c.Request().Context(), &user)
@@ -254,7 +258,7 @@ func (h *Handler) DeleteAccount(c echo.Context) error {
 	if err != nil {
 		var e *berrors.BusinessError
 		if errors.As(err, &e) {
-			return c.HTML(http.StatusBadRequest, `<script>alert('`+ e.Message +`');
+			return c.HTML(http.StatusBadRequest, `<script>alert('`+e.Message+`');
 			window.location.href = '/';</script>`)
 		}
 		logrus.WithFields(logrus.Fields{
@@ -318,7 +322,7 @@ func (h *Handler) Withdraw(c echo.Context) error {
 	if err != nil {
 		var e *berrors.BusinessError
 		if errors.As(err, &e) {
-			return c.HTML(http.StatusBadRequest, `<script>alert('`+ e.Message +`');
+			return c.HTML(http.StatusBadRequest, `<script>alert('`+e.Message+`');
 			window.location.href = '/index';</script>`)
 		}
 		logrus.WithFields(logrus.Fields{
@@ -372,14 +376,14 @@ func (h *Handler) CreatePosition(c echo.Context) error {
 	if err != nil {
 		var e *berrors.BusinessError
 		if errors.As(err, &e) {
-			return c.HTML(http.StatusBadRequest, `<script>alert('`+ e.Message +`');
+			return c.HTML(http.StatusBadRequest, `<script>alert('`+e.Message+`');
 			window.location.href = '/index';</script>`)
 		}
 		logrus.Errorf("createPosition: %v", err)
 		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to create position');
 		 window.location.href = '/index';</script>`)
 	}
-	return c.HTML(http.StatusOK, `<script>alert('Position `+ strategy +` created!');
+	return c.HTML(http.StatusOK, `<script>alert('Position `+strategy+` created!');
 	 window.location.href = '/index';</script>`)
 }
 

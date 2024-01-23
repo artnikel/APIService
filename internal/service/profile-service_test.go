@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -30,21 +31,17 @@ func TestSignUp(t *testing.T) {
 	rep.AssertExpectations(t)
 }
 
-// func TestLogin(t *testing.T) {
-// 	rep := new(mocks.UserRepository)
-
-// 	hashedbytes, err := bcrypt.GenerateFromPassword(testUser.Password, bcryptCost)
-// 	require.NoError(t, err)
-
-// 	rep.On("GetByLogin", mock.Anything, mock.AnythingOfType("string")).
-// 		Return(hashedbytes, testUser.ID, nil)
-
-// 	srv := NewUserService(rep, cfg)
-
-// 	err = srv.Login(context.Background(), &testUser)
-// 	require.NoError(t, err)
-// 	rep.AssertExpectations(t)
-// }
+func TestLogin(t *testing.T) {
+	rep := new(mocks.UserRepository)
+	hashedbytes, err := bcrypt.GenerateFromPassword([]byte(testUser.Password), bcryptCost)
+	require.NoError(t, err)
+	rep.On("GetByLogin", mock.Anything, mock.AnythingOfType("string")).
+		Return(hashedbytes, testUser.ID, nil)
+	srv := NewUserService(rep, cfg)
+	_, err = srv.GetByLogin(context.Background(), &testUser)
+	require.NoError(t, err)
+	rep.AssertExpectations(t)
+}
 
 func TestDeleteAccount(t *testing.T) {
 	rep := new(mocks.UserRepository)
@@ -57,23 +54,23 @@ func TestDeleteAccount(t *testing.T) {
 	rep.AssertExpectations(t)
 }
 
-// func TestGenerateHash(t *testing.T) {
-// 	rep := new(mocks.UserRepository)
-// 	srv := NewUserService(rep, cfg)
-// 	testBytes := []byte("test")
-// 	_, err := srv.GenerateHash(testBytes)
-// 	require.NoError(t, err)
-// 	rep.AssertExpectations(t)
-// }
+func TestGenerateHash(t *testing.T) {
+	rep := new(mocks.UserRepository)
+	srv := NewUserService(rep, cfg)
+	testBytes := []byte("test")
+	_, err := srv.GenerateHash(string(testBytes))
+	require.NoError(t, err)
+	rep.AssertExpectations(t)
+}
 
-// func TestCheckPasswordHash(t *testing.T) {
-// 	rep := new(mocks.UserRepository)
-// 	srv := NewUserService(rep, cfg)
-// 	testBytes := []byte("test")
-// 	hashedBytes, err := srv.GenerateHash(testBytes)
-// 	require.NoError(t, err)
-// 	isEqual, err := srv.CheckPasswordHash(hashedBytes, testBytes)
-// 	require.NoError(t, err)
-// 	require.True(t, isEqual)
-// 	rep.AssertExpectations(t)
-// }
+func TestCheckPasswordHash(t *testing.T) {
+	rep := new(mocks.UserRepository)
+	srv := NewUserService(rep, cfg)
+	testBytes := []byte("test")
+	hashedBytes, err := srv.GenerateHash(string(testBytes))
+	require.NoError(t, err)
+	isEqual, err := srv.CheckPasswordHash(hashedBytes, string(testBytes))
+	require.NoError(t, err)
+	require.True(t, isEqual)
+	rep.AssertExpectations(t)
+}

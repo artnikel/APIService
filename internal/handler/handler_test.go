@@ -1,263 +1,283 @@
 package handler
 
-// var (
-// 	testUser = model.User{
-// 		ID:       uuid.New(),
-// 		Login:    "testLogin",
-// 		Password: "testPassword",
-// 	}
-// 	testBalance = model.Balance{
-// 		BalanceID: uuid.New(),
-// 		ProfileID: uuid.New(),
-// 		Operation: 637.81,
-// 	}
-// 	testDeal = model.Deal{
-// 		SharesCount: decimal.NewFromFloat(1.5),
-// 		Company:     "Apple",
-// 		StopLoss:    decimal.NewFromFloat(180.5),
-// 		TakeProfit:  decimal.NewFromFloat(500.5),
-// 		Profit:      decimal.NewFromFloat(150),
-// 	}
-// 	testShare = model.Share{
-// 		Company: "Apple",
-// 		Price:   195.5,
-// 	}
-// 	v = validator.New()
-// )
+import (
+	"bytes"
+	"encoding/json"
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"os"
+	"strconv"
+	"testing"
 
-// func TestSignUp(t *testing.T) {
-// 	srv := new(mocks.UserService)
-// 	hndl := NewHandler(srv, nil, nil, v)
+	"github.com/artnikel/APIService/internal/config"
+	"github.com/artnikel/APIService/internal/handler/mocks"
+	"github.com/artnikel/APIService/internal/model"
+	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
+	"github.com/shopspring/decimal"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+)
 
-// 	jsonData, err := json.Marshal(testUser)
-// 	require.NoError(t, err)
+var (
+	testUser = model.User{
+		ID:       uuid.New(),
+		Login:    "testLogin",
+		Password: "testPassword",
+	}
+	testBalance = model.Balance{
+		BalanceID: uuid.New(),
+		ProfileID: uuid.New(),
+		Operation: 637.81,
+	}
+	testDeal = model.Deal{
+		SharesCount: decimal.NewFromFloat(1.5),
+		Company:     "Apple",
+		StopLoss:    decimal.NewFromFloat(180.5),
+		TakeProfit:  decimal.NewFromFloat(500.5),
+		Profit:      decimal.NewFromFloat(150),
+	}
+	testShare = model.Share{
+		Company: "Apple",
+		Price:   195.5,
+	}
+	v   = validator.New()
+	cfg *config.Variables
+)
 
-// 	srv.On("SignUp", mock.Anything, mock.AnythingOfType("*model.User")).Return(nil).Once()
-// 	e := echo.New()
+func TestMain(m *testing.M) {
+	var err error
+	cfg, err = config.New()
+	if err != nil {
+		log.Fatalf("could not parse config: %v", err)
+	}
+	exitVal := m.Run()
+	os.Exit(exitVal)
+}
 
-// 	req := httptest.NewRequest(http.MethodPost, "/signup", bytes.NewReader(jsonData))
-// 	req.Header.Set("Content-Type", "application/json")
-// 	rec := httptest.NewRecorder()
-// 	c := e.NewContext(req, rec)
+func TestSignUp(t *testing.T) {
+	srv := new(mocks.UserService)
+	hndl := NewHandler(srv, nil, nil, v, *cfg)
 
-// 	err = hndl.SignUp(c)
-// 	require.NoError(t, err)
-// 	srv.AssertExpectations(t)
-// }
+	jsonData, err := json.Marshal(testUser)
+	require.NoError(t, err)
 
-// func TestLogin(t *testing.T) {
-// 	srv := new(mocks.UserService)
-// 	hndl := NewHandler(srv, nil, nil, v)
+	srv.On("SignUp", mock.Anything, mock.AnythingOfType("*model.User")).Return(nil).Once()
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/signup", bytes.NewReader(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	err = hndl.SignUp(c)
+	require.NoError(t, err)
+	srv.AssertExpectations(t)
+}
 
-// 	jsonData, err := json.Marshal(testUser)
-// 	require.NoError(t, err)
+func TestLogin(t *testing.T) {
+	srv := new(mocks.UserService)
+	hndl := NewHandler(srv, nil, nil, v, *cfg)
 
-// 	srv.On("Login", mock.Anything, mock.AnythingOfType("*model.User")).Return(nil).Once()
-// 	e := echo.New()
+	jsonData, err := json.Marshal(testUser)
+	require.NoError(t, err)
 
-// 	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewReader(jsonData))
-// 	req.Header.Set("Content-Type", "application/json")
-// 	rec := httptest.NewRecorder()
-// 	c := e.NewContext(req, rec)
+	srv.On("Login", mock.Anything, mock.AnythingOfType("*model.User")).Return(nil).Once()
+	e := echo.New()
 
-// 	err = hndl.Login(c)
-// 	require.NoError(t, err)
+	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewReader(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
 
-// 	require.JSONEq(t, "", rec.Body.String())
-// 	srv.AssertExpectations(t)
-// }
+	err = hndl.Login(c)
+	require.NoError(t, err)
 
-// func TestDeleteAccount(t *testing.T) {
-// 	usrv := new(mocks.UserService)
-// 	bsrv := new(mocks.BalanceService)
-// 	hndl := NewHandler(usrv, bsrv, nil, v)
-// 	jsonData, err := json.Marshal(testBalance.ProfileID)
-// 	require.NoError(t, err)
-// 	bsrv.On("GetIDByToken", mock.Anything, mock.AnythingOfType("string")).Return(testBalance.ProfileID, nil).Once()
-// 	usrv.On("DeleteAccount", mock.Anything, mock.AnythingOfType("uuid.UUID")).Return(testUser.ID.String(), nil).Once()
-// 	e := echo.New()
+	require.JSONEq(t, "", rec.Body.String())
+	srv.AssertExpectations(t)
+}
 
-// 	req := httptest.NewRequest(http.MethodDelete, "/delete", bytes.NewReader(jsonData))
-// 	req.Header.Set("Content-Type", "application/json")
-// 	rec := httptest.NewRecorder()
-// 	c := e.NewContext(req, rec)
+func TestDeleteAccount(t *testing.T) {
+	usrv := new(mocks.UserService)
+	bsrv := new(mocks.BalanceService)
+	hndl := NewHandler(usrv, bsrv, nil, v, *cfg)
+	jsonData, err := json.Marshal(testBalance.ProfileID)
+	require.NoError(t, err)
+	usrv.On("DeleteAccount", mock.Anything, mock.AnythingOfType("uuid.UUID")).Return(testUser.ID.String(), nil).Once()
+	e := echo.New()
 
-// 	err = hndl.DeleteAccount(c)
-// 	require.NoError(t, err)
-// 	require.Contains(t, rec.Body.String(), testUser.ID.String())
-// 	usrv.AssertExpectations(t)
-// 	bsrv.AssertExpectations(t)
-// }
+	req := httptest.NewRequest(http.MethodDelete, "/delete", bytes.NewReader(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
 
-// func TestDeposit(t *testing.T) {
-// 	srv := new(mocks.BalanceService)
-// 	hndl := NewHandler(nil, srv, nil, v)
+	err = hndl.DeleteAccount(c)
+	require.NoError(t, err)
+	usrv.AssertExpectations(t)
+	bsrv.AssertExpectations(t)
+}
 
-// 	jsonData, err := json.Marshal(testBalance)
-// 	require.NoError(t, err)
-// 	srv.On("GetIDByToken", mock.Anything, mock.AnythingOfType("string")).Return(testBalance.ProfileID, nil).Once()
-// 	srv.On("BalanceOperation", mock.Anything, mock.AnythingOfType("*model.Balance")).Return(testBalance.Operation, nil).Once()
+func TestDeposit(t *testing.T) {
+	srv := new(mocks.BalanceService)
+	hndl := NewHandler(nil, srv, nil, v, *cfg)
+	store := NewRedisStore(*cfg)
 
-// 	e := echo.New()
-// 	req := httptest.NewRequest(http.MethodPost, "/deposit", bytes.NewReader(jsonData))
-// 	req.Header.Set("Content-Type", "application/json")
-// 	rec := httptest.NewRecorder()
-// 	c := e.NewContext(req, rec)
+	srv.On("BalanceOperation", mock.Anything, mock.AnythingOfType("*model.Balance")).Return(testBalance.Operation, nil).Once()
 
-// 	strOperation := strconv.FormatFloat(testBalance.Operation, 'f', -1, 64)
-// 	err = hndl.Deposit(c)
-// 	require.NoError(t, err)
-// 	require.Contains(t, rec.Body.String(), strOperation)
-// 	srv.AssertExpectations(t)
-// }
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/deposit", http.NoBody)
+	req.Header.Set("Content-Type", "application/json")
+	req.Form = url.Values{}
+	req.Form.Add("operation", strconv.FormatFloat(testBalance.Operation, 'f', -1, 64))
+	session, err := store.Get(req, "SESSION_ID")
+	require.NoError(t, err)
+	req.AddCookie(&http.Cookie{Name: "SESSION_ID", Value: session.ID})
 
-// func TestWithdraw(t *testing.T) {
-// 	srv := new(mocks.BalanceService)
-// 	hndl := NewHandler(nil, srv, nil, v)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
 
-// 	jsonData, err := json.Marshal(testBalance)
-// 	require.NoError(t, err)
-// 	srv.On("GetIDByToken", mock.Anything, mock.AnythingOfType("string")).Return(testBalance.ProfileID, nil).Once()
-// 	srv.On("BalanceOperation", mock.Anything, mock.AnythingOfType("*model.Balance")).Return(testBalance.Operation, nil).Once()
+	strOperation := strconv.FormatFloat(testBalance.Operation, 'f', -1, 64)
+	err = hndl.Deposit(c)
+	require.NoError(t, err)
+	require.Contains(t, rec.Body.String(), strOperation)
+	srv.AssertExpectations(t)
+}
 
-// 	e := echo.New()
-// 	req := httptest.NewRequest(http.MethodPost, "/withdraw", bytes.NewReader(jsonData))
-// 	req.Header.Set("Content-Type", "application/json")
-// 	rec := httptest.NewRecorder()
-// 	c := e.NewContext(req, rec)
+func TestWithdraw(t *testing.T) {
+	srv := new(mocks.BalanceService)
+	hndl := NewHandler(nil, srv, nil, v, *cfg)
+	store := NewRedisStore(*cfg)
 
-// 	strOperation := strconv.FormatFloat(testBalance.Operation, 'f', -1, 64)
-// 	err = hndl.Withdraw(c)
-// 	require.NoError(t, err)
-// 	require.Contains(t, rec.Body.String(), strOperation)
-// 	srv.AssertExpectations(t)
-// }
+	srv.On("BalanceOperation", mock.Anything, mock.AnythingOfType("*model.Balance")).Return(testBalance.Operation, nil).Once()
 
-// func TestGetBalance(t *testing.T) {
-// 	srv := new(mocks.BalanceService)
-// 	hndl := NewHandler(nil, srv, nil, v)
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/withdraw", http.NoBody)
+	req.Header.Set("Content-Type", "application/json")
+	req.Form = url.Values{}
+	req.Form.Add("operation", strconv.FormatFloat(testBalance.Operation, 'f', -1, 64))
+	session, err := store.Get(req, "SESSION_ID")
+	require.NoError(t, err)
+	req.AddCookie(&http.Cookie{Name: "SESSION_ID", Value: session.ID})
 
-// 	jsonData, err := json.Marshal(testBalance.ProfileID)
-// 	require.NoError(t, err)
-// 	srv.On("GetIDByToken", mock.Anything, mock.AnythingOfType("string")).Return(testBalance.ProfileID, nil).Once()
-// 	srv.On("GetBalance", mock.Anything, mock.AnythingOfType("uuid.UUID")).Return(testBalance.Operation, nil).Once()
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
 
-// 	e := echo.New()
-// 	req := httptest.NewRequest(http.MethodGet, "/getbalance", bytes.NewReader(jsonData))
-// 	req.Header.Set("Content-Type", "application/json")
-// 	rec := httptest.NewRecorder()
-// 	c := e.NewContext(req, rec)
+	strOperation := strconv.FormatFloat(testBalance.Operation, 'f', -1, 64)
+	err = hndl.Withdraw(c)
+	require.NoError(t, err)
+	require.Contains(t, rec.Body.String(), strOperation)
+	srv.AssertExpectations(t)
+}
 
-// 	strOperation := strconv.FormatFloat(testBalance.Operation, 'f', -1, 64)
-// 	err = hndl.GetBalance(c)
-// 	require.NoError(t, err)
-// 	require.Contains(t, rec.Body.String(), strOperation)
-// 	srv.AssertExpectations(t)
-// }
+func TestCreatePosition(t *testing.T) {
+	srv := new(mocks.BalanceService)
+	hndl := NewHandler(nil, srv, nil, v, *cfg)
+	store := NewRedisStore(*cfg)
 
-// func TestLong(t *testing.T) {
-// 	srv := new(mocks.BalanceService)
-// 	hndl := NewHandler(nil, srv, nil, v)
-// 	jsonData, err := json.Marshal(testDeal)
-// 	require.NoError(t, err)
-// 	srv.On("GetIDByToken", mock.Anything, mock.AnythingOfType("string")).Return(testBalance.ProfileID, nil).Once()
-// 	srv.On("CreatePosition", mock.Anything, mock.AnythingOfType("*model.Deal")).Return(testDeal.Profit.InexactFloat64(), nil).Once()
+	srv.On("CreatePosition", mock.Anything, mock.AnythingOfType("*model.Deal")).Return(testDeal.Profit.InexactFloat64(), nil).Once()
 
-// 	e := echo.New()
-// 	req := httptest.NewRequest(http.MethodGet, "/long", bytes.NewReader(jsonData))
-// 	req.Header.Set("Content-Type", "application/json")
-// 	rec := httptest.NewRecorder()
-// 	c := e.NewContext(req, rec)
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/long", http.NoBody)
+	req.Header.Set("Content-Type", "application/json")
+	req.Form = url.Values{}
+	req.Form.Add("company", testDeal.Company)
+	req.Form.Add("sharescount", testDeal.SharesCount.String())
+	req.Form.Add("stoploss", testDeal.StopLoss.String())
+	req.Form.Add("takeprofit", testDeal.TakeProfit.String())
+	session, err := store.Get(req, "SESSION_ID")
+	require.NoError(t, err)
+	req.AddCookie(&http.Cookie{Name: "SESSION_ID", Value: session.ID})
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
 
-// 	err = hndl.Long(c)
-// 	require.NoError(t, err)
-// }
+	err = hndl.CreatePosition(c)
+	require.NoError(t, err)
+	srv.AssertExpectations(t)
+}
 
-// func TestShort(t *testing.T) {
-// 	srv := new(mocks.BalanceService)
-// 	hndl := NewHandler(nil, srv, nil, v)
-// 	jsonData, err := json.Marshal(testDeal)
-// 	require.NoError(t, err)
-// 	srv.On("GetIDByToken", mock.Anything, mock.AnythingOfType("string")).Return(testBalance.ProfileID, nil).Once()
-// 	srv.On("CreatePosition", mock.Anything, mock.AnythingOfType("*model.Deal")).Return(testDeal.Profit.InexactFloat64(), nil).Once()
+func TestClosePositionManually(t *testing.T) {
+	tsrv := new(mocks.TradingService)
+	bsrv := new(mocks.BalanceService)
+	hndl := NewHandler(nil, bsrv, tsrv, v, *cfg)
+	store := NewRedisStore(*cfg)
 
-// 	e := echo.New()
-// 	req := httptest.NewRequest(http.MethodGet, "/short", bytes.NewReader(jsonData))
-// 	req.Header.Set("Content-Type", "application/json")
-// 	rec := httptest.NewRecorder()
-// 	c := e.NewContext(req, rec)
+	tsrv.On("ClosePositionManually", mock.Anything, mock.AnythingOfType("uuid.UUID"), mock.AnythingOfType("uuid.UUID")).
+		Return(testDeal.Profit.InexactFloat64(), nil).Once()
 
-// 	err = hndl.Short(c)
-// 	require.NoError(t, err)
-// }
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/closeposition", http.NoBody)
+	req.Header.Set("Content-Type", "application/json")
+	req.Form = url.Values{}
+	req.Form.Add("dealid", testDeal.DealID.String())
+	session, err := store.Get(req, "SESSION_ID")
+	require.NoError(t, err)
+	req.AddCookie(&http.Cookie{Name: "SESSION_ID", Value: session.ID})
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
 
-// func TestClosePositionManually(t *testing.T) {
-// 	tsrv := new(mocks.TradingService)
-// 	bsrv := new(mocks.BalanceService)
-// 	hndl := NewHandler(nil, bsrv, tsrv, v)
-// 	idParams := &model.Deal{
-// 		DealID:    testDeal.DealID,
-// 		ProfileID: testDeal.ProfileID,
-// 	}
-// 	jsonData, err := json.Marshal(idParams)
-// 	require.NoError(t, err)
-// 	bsrv.On("GetIDByToken", mock.Anything, mock.AnythingOfType("string")).Return(testBalance.ProfileID, nil).Once()
-// 	tsrv.On("ClosePositionManually", mock.Anything, mock.AnythingOfType("uuid.UUID"), mock.AnythingOfType("uuid.UUID")).
-// 		Return(testDeal.Profit.InexactFloat64(), nil).Once()
+	err = hndl.ClosePositionManually(c)
+	require.NoError(t, err)
+	bsrv.AssertExpectations(t)
+	tsrv.AssertExpectations(t)
+}
 
-// 	e := echo.New()
-// 	req := httptest.NewRequest(http.MethodPost, "/closeposition", bytes.NewReader(jsonData))
-// 	req.Header.Set("Content-Type", "application/json")
-// 	rec := httptest.NewRecorder()
-// 	c := e.NewContext(req, rec)
+func TestGetUnclosedPositions(t *testing.T) {
+	tsrv := new(mocks.TradingService)
+	bsrv := new(mocks.BalanceService)
+	hndl := NewHandler(nil, bsrv, tsrv, v, *cfg)
 
-// 	err = hndl.ClosePositionManually(c)
-// 	require.NoError(t, err)
-// 	bsrv.AssertExpectations(t)
-// 	tsrv.AssertExpectations(t)
-// }
+	var testDeals []*model.Deal
+	testDeals = append(testDeals, &testDeal)
+	tsrv.On("GetUnclosedPositions", mock.Anything, mock.AnythingOfType("uuid.UUID")).Return(testDeals, nil).Once()
 
-// func TestGetUnclosedPositions(t *testing.T) {
-// 	tsrv := new(mocks.TradingService)
-// 	bsrv := new(mocks.BalanceService)
-// 	hndl := NewHandler(nil, bsrv, tsrv, v)
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/getunclosed", http.NoBody)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
 
-// 	jsonData, err := json.Marshal(testBalance)
-// 	require.NoError(t, err)
-// 	var testDeals []*model.Deal
-// 	testDeals = append(testDeals, &testDeal)
-// 	bsrv.On("GetIDByToken", mock.Anything, mock.AnythingOfType("string")).Return(testBalance.ProfileID, nil).Once()
-// 	tsrv.On("GetUnclosedPositions", mock.Anything, mock.AnythingOfType("uuid.UUID")).Return(testDeals, nil).Once()
+	err := hndl.GetUnclosedPositions(c)
+	require.NoError(t, err)
+	tsrv.AssertExpectations(t)
+	bsrv.AssertExpectations(t)
+}
 
-// 	e := echo.New()
-// 	req := httptest.NewRequest(http.MethodGet, "/getunclosed", bytes.NewReader(jsonData))
-// 	req.Header.Set("Content-Type", "application/json")
-// 	rec := httptest.NewRecorder()
-// 	c := e.NewContext(req, rec)
+func TestGetClosedPositions(t *testing.T) {
+	tsrv := new(mocks.TradingService)
+	bsrv := new(mocks.BalanceService)
+	hndl := NewHandler(nil, bsrv, tsrv, v, *cfg)
 
-// 	err = hndl.GetUnclosedPositions(c)
-// 	require.NoError(t, err)
-// 	tsrv.AssertExpectations(t)
-// 	bsrv.AssertExpectations(t)
-// }
+	var testDeals []*model.Deal
+	testDeals = append(testDeals, &testDeal)
+	tsrv.On("GetClosedPositions", mock.Anything, mock.AnythingOfType("uuid.UUID")).Return(testDeals, nil).Once()
 
-// func TestGetPrices(t *testing.T) {
-// 	srv := new(mocks.TradingService)
-// 	hndl := NewHandler(nil, nil, srv, v)
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/getclosed", http.NoBody)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
 
-// 	jsonData, err := json.Marshal(testBalance)
-// 	require.NoError(t, err)
-// 	var testShares []model.Share
-// 	testShares = append(testShares, testShare)
-// 	srv.On("GetPrices", mock.Anything).Return(testShares, nil).Once()
+	err := hndl.GetClosedPositions(c)
+	require.NoError(t, err)
+	tsrv.AssertExpectations(t)
+	bsrv.AssertExpectations(t)
+}
 
-// 	e := echo.New()
-// 	req := httptest.NewRequest(http.MethodGet, "/getprices", bytes.NewReader(jsonData))
-// 	req.Header.Set("Content-Type", "application/json")
-// 	rec := httptest.NewRecorder()
-// 	c := e.NewContext(req, rec)
+func TestGetPrices(t *testing.T) {
+	srv := new(mocks.TradingService)
+	hndl := NewHandler(nil, nil, srv, v, *cfg)
+	var testShares []model.Share
+	testShares = append(testShares, testShare)
+	srv.On("GetPrices", mock.Anything).Return(testShares, nil).Once()
 
-// 	err = hndl.GetPrices(c)
-// 	require.NoError(t, err)
-// 	srv.AssertExpectations(t)
-// }
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/getprices", http.NoBody)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := hndl.GetPrices(c)
+	require.NoError(t, err)
+	srv.AssertExpectations(t)
+}

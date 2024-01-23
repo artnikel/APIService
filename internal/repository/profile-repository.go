@@ -28,7 +28,7 @@ func NewProfileRepository(client uproto.UserServiceClient) *ProfileRepository {
 func (p *ProfileRepository) SignUp(ctx context.Context, user *model.User) error {
 	_, err := p.client.SignUp(ctx, &uproto.SignUpRequest{User: &uproto.User{
 		Login:    user.Login,
-		Password: string(user.Password),
+		Password: user.Password,
 	}})
 	if err != nil {
 		grpcStatus, ok := status.FromError(err)

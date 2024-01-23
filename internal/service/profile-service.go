@@ -42,13 +42,12 @@ func (us *UserService) SignUp(ctx context.Context, user *model.User) error {
 	}
 	err := us.uRep.SignUp(ctx, user)
 	if err != nil {
-
 		return fmt.Errorf("signUp %w", err)
 	}
 	return nil
 }
 
-// Login is a method of UserService that getting password and id, then checked password hash, generating tokens and added refresh token to database.
+// GetByLogin is a method of UserService that getting password and id, then checked password hash, generating tokens and added refresh token to database.
 func (us *UserService) GetByLogin(ctx context.Context, user *model.User) (uuid.UUID, error) {
 	hash, id, err := us.uRep.GetByLogin(ctx, user.Login)
 	user.ID = id

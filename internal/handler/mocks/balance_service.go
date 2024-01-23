@@ -59,29 +59,6 @@ func (_m *BalanceService) GetBalance(ctx context.Context, profileid uuid.UUID) (
 	return r0, r1
 }
 
-// GetIDByToken provides a mock function with given fields: authHeader
-func (_m *BalanceService) GetIDByToken(authHeader string) (uuid.UUID, error) {
-	ret := _m.Called(authHeader)
-
-	var r0 uuid.UUID
-	if rf, ok := ret.Get(0).(func(string) uuid.UUID); ok {
-		r0 = rf(authHeader)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(uuid.UUID)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(authHeader)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 type mockConstructorTestingTNewBalanceService interface {
 	mock.TestingT
 	Cleanup(func())

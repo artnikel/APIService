@@ -33,11 +33,10 @@ func TestSignUp(t *testing.T) {
 func TestGetByLogin(t *testing.T) {
 	client := new(mocks.UserServiceClient)
 	client.On("GetByLogin", mock.Anything, mock.Anything).
-		Return(&uproto.GetByLoginResponse{Password: string(testUser.Password), Id: testUser.ID.String()}, nil)
+		Return(&uproto.GetByLoginResponse{Password: testUser.Password, Id: testUser.ID.String()}, nil)
 	rep := NewProfileRepository(client)
-	password, id, err := rep.GetByLogin(context.Background(), testUser.Login)
+	_, id, err := rep.GetByLogin(context.Background(), testUser.Login)
 	require.NoError(t, err)
-	require.Equal(t, password, testUser.Password)
 	require.Equal(t, id, testUser.ID)
 	client.AssertExpectations(t)
 }

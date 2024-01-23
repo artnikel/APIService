@@ -11,8 +11,8 @@ import (
 // User contains an info about the user and will be written in a users table
 type User struct {
 	ID       uuid.UUID // unique id of user
-	Login    string    `json:"login" form:"login" validate:"required,min=5"` // username of user account
-	Password string    `json:"password" form:"password" validate:"required,min=8"`  // password of user account
+	Login    string    `json:"login" form:"login" validate:"required,min=5"`       // username of user account
+	Password string    `json:"password" form:"password" validate:"required,min=8"` // password of user account
 }
 
 // Share is a struct for shares entity

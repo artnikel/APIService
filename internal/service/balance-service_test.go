@@ -37,4 +37,3 @@ func TestGetBalanceAndOperation(t *testing.T) {
 	require.Equal(t, money, testBalance.Operation)
 	rep.AssertExpectations(t)
 }
-

@@ -5,8 +5,8 @@ import "github.com/caarlos0/env"
 
 // Variables is a struct with environment variables
 type Variables struct {
-	TokenSignature string `env:"TOKEN_SIGNATURE"`
-	TradingAPIPort int    `env:"TRADING_API_PORT"`
+	TokenSignature    string `env:"TOKEN_SIGNATURE"`
+	TradingAPIPort    int    `env:"TRADING_API_PORT"`
 	RedisPriceAddress string `env:"REDIS_PRICE_ADDRESS"`
 }
 
