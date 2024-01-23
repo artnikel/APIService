@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/artnikel/APIService/internal/config"
@@ -62,17 +63,33 @@ func TestSignUp(t *testing.T) {
 	srv := new(mocks.UserService)
 	hndl := NewHandler(srv, nil, nil, v, *cfg)
 
-	jsonData, err := json.Marshal(testUser)
+	formData := url.Values{}
+	formData.Set("login", testUser.Login)
+	formData.Set("password", testUser.Password)
+
+	originalDir, err := os.Getwd()
+    require.NoError(t, err)
+
+	defer func() {
+        err := os.Chdir(originalDir)
+        require.NoError(t, err)
+    }()
+
+	formDataReader := strings.NewReader(formData.Encode())
+	err = os.Chdir("../../../APIService")
 	require.NoError(t, err)
 
 	srv.On("SignUp", mock.Anything, mock.AnythingOfType("*model.User")).Return(nil).Once()
+	srv.On("GetByLogin", mock.Anything, mock.AnythingOfType("*model.User")).Return(testUser.ID, nil).Once()
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/signup", bytes.NewReader(jsonData))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, "/signup", formDataReader)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
+	
 	err = hndl.SignUp(c)
 	require.NoError(t, err)
+	require.Equal(t, http.StatusSeeOther, rec.Code)
 	srv.AssertExpectations(t)
 }
 
@@ -80,21 +97,33 @@ func TestLogin(t *testing.T) {
 	srv := new(mocks.UserService)
 	hndl := NewHandler(srv, nil, nil, v, *cfg)
 
-	jsonData, err := json.Marshal(testUser)
+	formData := url.Values{}
+	formData.Set("login", testUser.Login)
+	formData.Set("password", testUser.Password)
+
+	originalDir, err := os.Getwd()
+    require.NoError(t, err)
+
+	defer func() {
+        err := os.Chdir(originalDir)
+        require.NoError(t, err)
+    }()
+
+	formDataReader := strings.NewReader(formData.Encode())
+	err = os.Chdir("../../../APIService")
 	require.NoError(t, err)
 
-	srv.On("Login", mock.Anything, mock.AnythingOfType("*model.User")).Return(nil).Once()
+	srv.On("GetByLogin", mock.Anything, mock.AnythingOfType("*model.User")).Return(testUser.ID, nil).Once()
 	e := echo.New()
 
-	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewReader(jsonData))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, "/login", formDataReader)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
 	err = hndl.Login(c)
 	require.NoError(t, err)
-
-	require.JSONEq(t, "", rec.Body.String())
+	require.Equal(t, http.StatusSeeOther, rec.Code)
 	srv.AssertExpectations(t)
 }
 
@@ -171,11 +200,11 @@ func TestWithdraw(t *testing.T) {
 }
 
 func TestCreatePosition(t *testing.T) {
-	srv := new(mocks.BalanceService)
-	hndl := NewHandler(nil, srv, nil, v, *cfg)
+	srv := new(mocks.TradingService)
+	hndl := NewHandler(nil, nil, srv, v, *cfg)
 	store := NewRedisStore(*cfg)
 
-	srv.On("CreatePosition", mock.Anything, mock.AnythingOfType("*model.Deal")).Return(testDeal.Profit.InexactFloat64(), nil).Once()
+	srv.On("CreatePosition", mock.Anything, mock.AnythingOfType("*model.Deal")).Return(nil).Once()
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/long", http.NoBody)
