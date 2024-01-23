@@ -1,14 +1,14 @@
+companyData = [];
+
 function updateShares(tableBody, shares) {
   console.log('UpdateShares - tableBody:', tableBody);
   console.log('UpdateShares - shares:', shares);
 
   try {
-    // Ensure tableBody is a valid element
     if (!tableBody || !(tableBody instanceof HTMLElement)) {
       throw new Error('Invalid table body.');
     }
 
-    // Ensure shares is an array
     if (!Array.isArray(shares)) {
       throw new Error('Shares data is not an array.');
     }
@@ -47,6 +47,7 @@ function fetchDataAndLog(tableBodies) {
     })
     .then(data => {
       console.log('Received data at', new Date(), ':', data);
+      companyData = data;
       tableBodies.forEach(tableBody => {
         console.log('Updating shares for table:', tableBody);
         updateShares(tableBody, data);
@@ -55,6 +56,18 @@ function fetchDataAndLog(tableBodies) {
     .catch(error => {
       console.error('Error fetching data:', error);
     });
+}
+
+function updateCompanyList() {
+  const companyList = document.getElementById('companyList');
+  if (companyList && companyList.children.length === 0) {
+    const uniqueCompanies = [...new Set(companyData.map(share => share.company))];
+    uniqueCompanies.forEach(company => {
+      const option = document.createElement('option');
+      option.value = company;
+      companyList.appendChild(option);
+    });
+  }
 }
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -108,11 +121,32 @@ document.addEventListener("DOMContentLoaded", function () {
   var tableBody = document.getElementById('shares-table-body');
   fetchDataAndLog([tableBody, longTable, shortTable, modalTable]);
 
+  document.getElementById('companyLong').addEventListener('click', function() {
+    updateCompanyList();
+  });
+
+  document.getElementById('companyShort').addEventListener('click', function() {
+    updateCompanyList();
+  });
+
+  updateCompanyList();
+
+  var companyInput = document.getElementById('companyLong');
+
+  companyInput.addEventListener('input', function(event) {
+    var enteredCompany = event.target.value;
+    var companyList = document.getElementById('companyList');
+    var validCompanies = [...companyList.options].map(option => option.value);
+
+    if (!validCompanies.includes(enteredCompany)) {
+      event.target.value = '';
+    }
+  });
+
   setInterval(function () {
     fetchDataAndLog([tableBody, longTable, shortTable, modalTable]);
   }, 1500);
 });
-
 
 document.getElementById('openOrdersModal').addEventListener('click', function() {
   fetchUnclosedPositions(); 
@@ -156,7 +190,7 @@ async function copyToClipboard(text) {
       alert('Deal ID copied to clipboard: ' + text);
   } catch (err) {
       console.error('Unable to copy to clipboard', err);
-      alert('Unable to copy to clipboard. Please try again.');
+      alert('Unable to copy to clipboard. Please try again or copy Deal ID manually.');
   }
 }
 

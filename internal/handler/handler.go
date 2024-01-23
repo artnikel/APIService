@@ -392,7 +392,7 @@ func (h *Handler) ClosePositionManually(c echo.Context) error {
 	dealUUID, err := uuid.Parse(c.FormValue("dealid"))
 	if err != nil {
 		logrus.Errorf("closePositionManually: %v", err)
-		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to parse deal ID');
+		return c.HTML(http.StatusBadRequest, `<script>alert('Invalid deal ID');
 		 window.location.href = '/index';</script>`)
 	}
 	profit, err := h.tradingService.ClosePositionManually(c.Request().Context(), dealUUID, profileID)
@@ -439,7 +439,7 @@ func (h *Handler) GetClosedPositions(c echo.Context) error {
 func (h *Handler) GetPrices(c echo.Context) error {
 	shares, err := h.tradingService.GetPrices(c.Request().Context())
 	if err != nil {
-		logrus.Errorf("getPrices: %v", err)
+		logrus.Infof("getPrices: %v", err)
 		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to get shares');
 		 window.location.href = '/index';</script>`)
 	}

@@ -242,7 +242,7 @@
               </div>
               <div class="modal-body" style="font-size: 14px;">
                   <table class="table table-striped">
-                      <thead>
+                      <thead class="text-nowrap">
                           <tr>
                               <th>Deal ID</th>
                               <th>Shares count</th>
@@ -253,7 +253,7 @@
                               <th>Deal-time</th>
                           </tr>
                       </thead>
-                      <tbody id="unclosed-positions-table-body">
+                      <tbody id="unclosed-positions-table-body" class="text-nowrap">
                       </tbody>                     
                   </table>
               </div>
@@ -269,7 +269,7 @@
               </div>
               <div class="modal-body" style="font-size: 14px;">
                   <table class="table table-striped">
-                      <thead>
+                      <thead class="text-nowrap">
                           <tr>
                               <th>Deal ID</th>
                               <th>Shares count</th>
@@ -282,7 +282,7 @@
                               <th>End deal-time</th>
                           </tr>
                       </thead>
-                      <tbody id="closed-positions-table-body">
+                      <tbody id="closed-positions-table-body" class="text-nowrap">
                       </tbody>
                   </table>
               </div>
@@ -297,11 +297,9 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <a>Are you sure you want to delete the account with no possibility of recovery?</a>
+            <p><strong>Any money left on the balance account will be lost!</strong></p> 
+            <p>Are you sure you want to delete the account with no possibility of recovery?</p>
             <form action="/delete" method="POST">
-              <div class="form-group">
-                <br>
-              </div>
               <button type="submit" class="btn btn-primary">Delete</button>
             </form>                      
           </div>
@@ -339,7 +337,8 @@
                 <form id="longForm" action="/long" method="POST" onsubmit="return validateForm('long')">
                   <div class="mb-3">
                       <label for="companyLong" class="form-label">Company</label>
-                      <input type="text" class="form-control" id="companyLong" name="company" required>
+                      <input list="companyList" type="text" class="form-control" id="companyLong" name="company" required autocomplete="off">
+                      <datalist id="companyList"></datalist>  
                   </div>
                   <div class="mb-3">
                     <label for="sharescountLong" class="form-label">Shares count</label>
@@ -374,7 +373,8 @@
               <form id="shortForm" action="/short" method="POST" onsubmit="return validateForm('short')">
                 <div class="mb-3">
                     <label for="companyShort" class="form-label">Company</label>
-                    <input type="text" class="form-control" id="companyShort" name="company" required>
+                    <input list="companyList" type="text" class="form-control" id="companyShort" name="company" required autocomplete="off">
+                      <datalist id="companyList"></datalist> 
                 </div>
                 <div class="mb-3">
                   <label for="sharescountShort" class="form-label">Shares count</label>
