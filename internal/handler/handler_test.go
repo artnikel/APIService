@@ -68,12 +68,12 @@ func TestSignUp(t *testing.T) {
 	formData.Set("password", testUser.Password)
 
 	originalDir, err := os.Getwd()
-    require.NoError(t, err)
+	require.NoError(t, err)
 
 	defer func() {
-        err := os.Chdir(originalDir)
-        require.NoError(t, err)
-    }()
+		errCh := os.Chdir(originalDir)
+		require.NoError(t, errCh)
+	}()
 
 	formDataReader := strings.NewReader(formData.Encode())
 	err = os.Chdir("../../../APIService")
@@ -86,7 +86,7 @@ func TestSignUp(t *testing.T) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	
+
 	err = hndl.SignUp(c)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusSeeOther, rec.Code)
@@ -102,12 +102,12 @@ func TestLogin(t *testing.T) {
 	formData.Set("password", testUser.Password)
 
 	originalDir, err := os.Getwd()
-    require.NoError(t, err)
+	require.NoError(t, err)
 
 	defer func() {
-        err := os.Chdir(originalDir)
-        require.NoError(t, err)
-    }()
+		errCh := os.Chdir(originalDir)
+		require.NoError(t, errCh)
+	}()
 
 	formDataReader := strings.NewReader(formData.Encode())
 	err = os.Chdir("../../../APIService")

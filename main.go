@@ -65,7 +65,7 @@ func main() {
 	hndl := handler.NewHandler(usrv, bsrv, tsrv, v, *cfg)
 	fmt.Println("API Service started")
 	e := echo.New()
-	e.Static("/templates", "templates")
+	e.Static("/static", "static")
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	store := handler.NewRedisStore(*cfg)

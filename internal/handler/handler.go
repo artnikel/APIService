@@ -100,7 +100,7 @@ func (h *Handler) getProfileID(c echo.Context) (uuid.UUID, error) {
 
 // Auth is endpoint for auth page
 func (h *Handler) Auth(c echo.Context) error {
-	tmpl, err := template.ParseFiles("templates/auth/auth.html")
+	tmpl, err := template.ParseFiles("static/auth/auth.html")
 	if err != nil {
 		return echo.ErrNotFound
 	}
@@ -112,7 +112,7 @@ func (h *Handler) Index(c echo.Context) error {
 	type PageData struct {
 		Orders []*model.Deal
 	}
-	tmpl, err := template.ParseFiles("templates/index/index.html")
+	tmpl, err := template.ParseFiles("static/index/index.html")
 	if err != nil {
 		return echo.ErrNotFound
 	}
@@ -141,7 +141,7 @@ func (h *Handler) Index(c echo.Context) error {
 
 // SignUp calls method of Service by handler
 func (h *Handler) SignUp(c echo.Context) error {
-	tmpl, err := template.ParseFiles("templates/auth/auth.html")
+	tmpl, err := template.ParseFiles("static/auth/auth.html")
 	if err != nil {
 		return echo.ErrNotFound
 	}
@@ -203,7 +203,7 @@ func (h *Handler) SignUp(c echo.Context) error {
 
 // Login calls method of Service by handler
 func (h *Handler) Login(c echo.Context) error {
-	tmpl, err := template.ParseFiles("templates/auth/auth.html")
+	tmpl, err := template.ParseFiles("static/auth/auth.html")
 	if err != nil {
 		return echo.ErrNotFound
 	}
