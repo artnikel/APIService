@@ -38,45 +38,22 @@ func (_m *UserService) DeleteAccount(ctx context.Context, id uuid.UUID) (string,
 	return r0, r1
 }
 
-// Login provides a mock function with given fields: ctx, user
-func (_m *UserService) Login(ctx context.Context, user *model.User) (*model.TokenPair, error) {
+// GetByLogin provides a mock function with given fields: ctx, user
+func (_m *UserService) GetByLogin(ctx context.Context, user *model.User) (uuid.UUID, error) {
 	ret := _m.Called(ctx, user)
 
-	var r0 *model.TokenPair
-	if rf, ok := ret.Get(0).(func(context.Context, *model.User) *model.TokenPair); ok {
+	var r0 uuid.UUID
+	if rf, ok := ret.Get(0).(func(context.Context, *model.User) uuid.UUID); ok {
 		r0 = rf(ctx, user)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*model.TokenPair)
+			r0 = ret.Get(0).(uuid.UUID)
 		}
 	}
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *model.User) error); ok {
 		r1 = rf(ctx, user)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// Refresh provides a mock function with given fields: ctx, tokenPair
-func (_m *UserService) Refresh(ctx context.Context, tokenPair *model.TokenPair) (*model.TokenPair, error) {
-	ret := _m.Called(ctx, tokenPair)
-
-	var r0 *model.TokenPair
-	if rf, ok := ret.Get(0).(func(context.Context, *model.TokenPair) *model.TokenPair); ok {
-		r0 = rf(ctx, tokenPair)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*model.TokenPair)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *model.TokenPair) error); ok {
-		r1 = rf(ctx, tokenPair)
 	} else {
 		r1 = ret.Error(1)
 	}

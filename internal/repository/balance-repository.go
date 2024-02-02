@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"strconv"
 
+	berrors "github.com/artnikel/APIService/internal/errors"
 	"github.com/artnikel/APIService/internal/model"
 	bproto "github.com/artnikel/BalanceService/proto"
 	"github.com/google/uuid"
+	"google.golang.org/grpc/status"
 )
 
 // BalanceRepository represents the client of Balance Service repository implementation.
@@ -30,6 +32,10 @@ func (b *BalanceRepository) BalanceOperation(ctx context.Context, balance *model
 		Operation: balance.Operation,
 	}})
 	if err != nil {
+		grpcStatus, ok := status.FromError(err)
+		if ok && grpcStatus.Message() == berrors.NotEnoughMoney {
+			return 0, berrors.New(berrors.NotEnoughMoney, "Not enough money")
+		}
 		return 0, fmt.Errorf("balanceOperation %w", err)
 	}
 	operation, err := strconv.ParseFloat(resp.Operation, 64)

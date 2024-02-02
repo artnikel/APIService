@@ -3,11 +3,10 @@ package service
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/artnikel/APIService/internal/config"
+	berrors "github.com/artnikel/APIService/internal/errors"
 	"github.com/artnikel/APIService/internal/model"
-	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )
@@ -43,7 +42,7 @@ func (bs *BalanceService) BalanceOperation(ctx context.Context, balance *model.B
 			}
 			return operation, nil
 		}
-		return 0, fmt.Errorf("not enough money")
+		return 0, berrors.New(berrors.NotEnoughMoney, "Not enough money")
 	}
 	operation, err := bs.bRep.BalanceOperation(ctx, balance)
 	if err != nil {
@@ -59,31 +58,4 @@ func (bs *BalanceService) GetBalance(ctx context.Context, profileid uuid.UUID) (
 		return 0, fmt.Errorf("getBalance %w", err)
 	}
 	return money, nil
-}
-
-// GetIDByToken is a method that get id by access token
-func (bs *BalanceService) GetIDByToken(authHeader string) (uuid.UUID, error) {
-	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-	if tokenString == authHeader {
-		return uuid.Nil, fmt.Errorf("authorization header is invalid")
-	}
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return []byte(bs.cfg.TokenSignature), nil
-	})
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("error jwt parse %w", err)
-	}
-	if !token.Valid {
-		return uuid.Nil, fmt.Errorf("access token is invalid")
-	}
-	if claims, ok := token.Claims.(jwt.MapClaims); ok {
-		if id, ok := claims["id"].(string); ok {
-			profileid, err := uuid.Parse(id)
-			if err != nil {
-				return uuid.Nil, fmt.Errorf("parse %w", err)
-			}
-			return profileid, nil
-		}
-	}
-	return uuid.Nil, nil
 }

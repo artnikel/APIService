@@ -52,6 +52,29 @@ func (_m *TradingService) CreatePosition(ctx context.Context, deal *model.Deal) 
 	return r0
 }
 
+// GetClosedPositions provides a mock function with given fields: ctx, profileid
+func (_m *TradingService) GetClosedPositions(ctx context.Context, profileid uuid.UUID) ([]*model.Deal, error) {
+	ret := _m.Called(ctx, profileid)
+
+	var r0 []*model.Deal
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) []*model.Deal); ok {
+		r0 = rf(ctx, profileid)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*model.Deal)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, profileid)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetPrices provides a mock function with given fields: ctx
 func (_m *TradingService) GetPrices(ctx context.Context) ([]model.Share, error) {
 	ret := _m.Called(ctx)

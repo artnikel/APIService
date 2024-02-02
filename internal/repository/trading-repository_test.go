@@ -25,6 +25,8 @@ var (
 		StopLoss:      decimal.NewFromFloat(1500),
 		TakeProfit:    decimal.NewFromFloat(1000),
 		DealTime:      time.Now().UTC(),
+		Profit:        decimal.NewFromFloat(300),
+		EndDealTime:   time.Now().UTC(),
 	}
 	testShare = &model.Share{
 		Company: "Microsoft",
@@ -71,6 +73,30 @@ func TestGetUnclosedPositions(t *testing.T) {
 		Return(&tproto.GetUnclosedPositionsResponse{Deal: testDeals}, nil)
 	rep := NewTradingRepository(client)
 	_, err := rep.GetUnclosedPositions(context.Background(), testDeal.ProfileID)
+	require.NoError(t, err)
+	client.AssertExpectations(t)
+}
+
+func TestGetClosedPositions(t *testing.T) {
+	client := new(mocks.TradingServiceClient)
+	var testDeals []*tproto.Deal
+	protoDeal := tproto.Deal{
+		DealID:        testDeal.DealID.String(),
+		SharesCount:   testDeal.SharesCount.InexactFloat64(),
+		ProfileID:     testDeal.ProfileID.String(),
+		Company:       testDeal.Company,
+		PurchasePrice: testDeal.PurchasePrice.InexactFloat64(),
+		StopLoss:      testDeal.StopLoss.InexactFloat64(),
+		TakeProfit:    testDeal.TakeProfit.InexactFloat64(),
+		DealTime:      timestamppb.New(testDeal.DealTime),
+		Profit:        testDeal.Profit.InexactFloat64(),
+		EndDealTime:   timestamppb.New(testDeal.EndDealTime),
+	}
+	testDeals = append(testDeals, &protoDeal)
+	client.On("GetClosedPositions", mock.Anything, mock.Anything).
+		Return(&tproto.GetClosedPositionsResponse{Deal: testDeals}, nil)
+	rep := NewTradingRepository(client)
+	_, err := rep.GetClosedPositions(context.Background(), testDeal.ProfileID)
 	require.NoError(t, err)
 	client.AssertExpectations(t)
 }

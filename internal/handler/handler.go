@@ -3,23 +3,28 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"math"
+	"log"
 	"net/http"
+	"strconv"
+	"text/template"
 
+	"github.com/artnikel/APIService/internal/config"
+	berrors "github.com/artnikel/APIService/internal/errors"
 	"github.com/artnikel/APIService/internal/model"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/boj/redistore.v1"
 )
 
 // UserService is an interface that defines the methods on User entity.
 type UserService interface {
 	SignUp(ctx context.Context, user *model.User) error
-	Login(ctx context.Context, user *model.User) (*model.TokenPair, error)
-	Refresh(ctx context.Context, tokenPair *model.TokenPair) (*model.TokenPair, error)
+	GetByLogin(ctx context.Context, user *model.User) (uuid.UUID, error)
 	DeleteAccount(ctx context.Context, id uuid.UUID) (string, error)
 }
 
@@ -27,7 +32,6 @@ type UserService interface {
 type BalanceService interface {
 	BalanceOperation(ctx context.Context, balance *model.Balance) (float64, error)
 	GetBalance(ctx context.Context, profileid uuid.UUID) (float64, error)
-	GetIDByToken(authHeader string) (uuid.UUID, error)
 }
 
 // TradingService is an interface that defines the method on Trading entity.
@@ -35,6 +39,7 @@ type TradingService interface {
 	CreatePosition(ctx context.Context, deal *model.Deal) error
 	ClosePositionManually(ctx context.Context, dealid, profileid uuid.UUID) (float64, error)
 	GetUnclosedPositions(ctx context.Context, profileid uuid.UUID) ([]*model.Deal, error)
+	GetClosedPositions(ctx context.Context, profileid uuid.UUID) ([]*model.Deal, error)
 	GetPrices(ctx context.Context) ([]model.Share, error)
 }
 
@@ -44,493 +49,427 @@ type Handler struct {
 	balanceService BalanceService
 	tradingService TradingService
 	validate       *validator.Validate
+	cfg            config.Variables
 }
 
 // NewHandler creates a new instance of the Handler struct.
-func NewHandler(userService UserService, balanceService BalanceService, tradingService TradingService, v *validator.Validate) *Handler {
+func NewHandler(userService UserService, balanceService BalanceService, tradingService TradingService, v *validator.Validate, cfg config.Variables) *Handler {
 	return &Handler{
 		userService:    userService,
 		balanceService: balanceService,
 		tradingService: tradingService,
 		validate:       v,
+		cfg:            cfg,
 	}
 }
 
-// inputData is a struct for binding login and password.
-type inputData struct {
-	Login    string `json:"login" form:"login" validate:"required"`
-	Password string `json:"password" form:"password" validate:"required"`
+// NewRedisStore creates a new Redis storage instance for sessions
+func NewRedisStore(cfg config.Variables) *redistore.RediStore {
+	// nolint gonmd
+	store, err := redistore.NewRediStore(10, "tcp", cfg.RedisPriceAddress, "", []byte(cfg.TokenSignature))
+	if err != nil {
+		log.Fatalf("failed to create redis store: %v", err)
+	}
+	return store
 }
 
-// dealData is a struct for binding new deal.
-type dealData struct {
-	SharesCount float64 `json:"sharescount" form:"sharescount" validate:"required"`
-	Company     string  `json:"company" form:"company" validate:"required"`
-	StopLoss    float64 `json:"stoploss" form:"stoploss" validate:"required"`
-	TakeProfit  float64 `json:"takeprofit" form:"takeprofit" validate:"required"`
+// getProfileID is method for getting id of profile from session
+func (h *Handler) getProfileID(c echo.Context) (uuid.UUID, error) {
+	cookie, err := c.Cookie("SESSION_ID")
+	if err != nil {
+		logrus.Errorf("getProfileID: %v", err)
+		return uuid.Nil, c.Redirect(http.StatusSeeOther, "/")
+	}
+	store := NewRedisStore(h.cfg)
+	session, err := store.Get(c.Request(), cookie.Name)
+	if err != nil {
+		logrus.Errorf("getProfileID: %v", err)
+		return uuid.Nil, echo.ErrNotFound
+	}
+	if len(session.Values) == 0 {
+		return uuid.Nil, c.Redirect(http.StatusSeeOther, "/")
+	}
+	profileid := session.Values["id"].(string)
+	profileUUID, err := uuid.Parse(profileid)
+	if err != nil {
+		logrus.Errorf("getProfileID: %v", err)
+		return uuid.Nil, echo.ErrInternalServerError
+	}
+	return profileUUID, nil
 }
 
-type closeData struct {
-	DealID string `json:"dealid" form:"dealid" validate:"required,uuid"`
+// Auth is endpoint for auth page
+func (h *Handler) Auth(c echo.Context) error {
+	tmpl, err := template.ParseFiles("templates/auth/auth.html")
+	if err != nil {
+		return echo.ErrNotFound
+	}
+	return tmpl.ExecuteTemplate(c.Response().Writer, "auth", nil)
+}
+
+// Index is endpoint for main page
+func (h *Handler) Index(c echo.Context) error {
+	type PageData struct {
+		Orders []*model.Deal
+	}
+	tmpl, err := template.ParseFiles("templates/index/index.html")
+	if err != nil {
+		return echo.ErrNotFound
+	}
+	profileID, err := h.getProfileID(c)
+	if err != nil {
+		return echo.ErrUnauthorized
+	}
+	balance, err := h.balanceService.GetBalance(c.Request().Context(), profileID)
+	if err != nil {
+		logrus.Errorf("index: %v", err)
+		return echo.ErrInternalServerError
+	}
+	orders, err := h.tradingService.GetUnclosedPositions(c.Request().Context(), profileID)
+	if err != nil {
+		logrus.Errorf("index: %v", err)
+		return echo.ErrInternalServerError
+	}
+	return tmpl.ExecuteTemplate(c.Response().Writer, "index", struct {
+		Balance  float64
+		PageData PageData
+	}{
+		Balance:  balance,
+		PageData: PageData{Orders: orders},
+	})
 }
 
 // SignUp calls method of Service by handler
-// @Summary Registration
-// @ID create-account
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param input body inputData true "Please fill the login (5-20 symbols) and password (minimum 8 symbols) fields."
-// @Success 201 {string} string "token"
-// @Failure 400 {object} error
-// @Router /signup [post]
 func (h *Handler) SignUp(c echo.Context) error {
-	var newUser model.User
-	requestData := &inputData{}
-	err := c.Bind(requestData)
+	tmpl, err := template.ParseFiles("templates/auth/auth.html")
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-SignUpUser: Invalid request payload")
+		return echo.ErrNotFound
 	}
-	newUser.Login = requestData.Login
-	newUser.Password = []byte(requestData.Password)
-	err = h.validate.StructCtx(c.Request().Context(), newUser)
-	if err != nil {
-		logrus.Errorf("Handler-SignUp: error: %v", err)
-		return echo.NewHTTPError(http.StatusBadRequest, "failed to validate")
+	var user model.User
+	if errBind := c.Bind(&user); errBind != nil {
+		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
+			"errorMsg": "Failed to read fields",
+		})
 	}
-	err = h.userService.SignUp(c.Request().Context(), &newUser)
+	tempPassword := user.Password
+	err = h.validate.StructCtx(c.Request().Context(), user)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
-			"ID":           newUser.ID,
-			"Login":        newUser.Login,
-			"Password":     newUser.Password,
-			"RefreshToken": newUser.RefreshToken,
-		}).Errorf("Handler-SignUp: error: %v", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to signUp")
+			"Login":    user.Login,
+			"Password": user.Password,
+		}).Errorf("signUp: %v", err)
+		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
+			"errorMsg": "Invalid fields! The fields have not been validated",
+		})
 	}
-	return c.JSON(http.StatusCreated, "Account created.")
+	err = h.userService.SignUp(c.Request().Context(), &user)
+	if err != nil {
+		var e *berrors.BusinessError
+		if errors.As(err, &e) {
+			return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
+				"errorMsg": e.Message,
+			})
+		}
+		logrus.Errorf("signUp: %v", err)
+		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
+			"errorMsg": "Failed to sign up",
+		})
+	}
+	user.Password = tempPassword
+	userID, err := h.userService.GetByLogin(c.Request().Context(), &user)
+	if err != nil {
+		logrus.Errorf("signUp: %v", err)
+		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
+			"errorMsg": "Failed to log in",
+		})
+	}
+	store := NewRedisStore(h.cfg)
+	session, err := store.Get(c.Request(), "SESSION_ID")
+	if err != nil {
+		logrus.Errorf("signUp: %v", err)
+		return echo.ErrNotFound
+	}
+	session.Values["id"] = userID.String()
+	session.Values["login"] = user.Login
+	session.Values["password"] = user.Password
+	if err = session.Save(c.Request(), c.Response()); err != nil {
+		logrus.Errorf("signUp: %v", err)
+		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
+			"errorMsg": "Error saving session",
+		})
+	}
+	return c.Redirect(http.StatusSeeOther, "/index")
 }
 
 // Login calls method of Service by handler
-// @Summary Account login
-// @ID login
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param input body inputData true "Please fill the login and password fields."
-// @Success 200 {string} string "tokens"
-// @Failure 400 {string} error
-// @Router /login [post]
 func (h *Handler) Login(c echo.Context) error {
-	var requestData inputData
-	err := c.Bind(&requestData)
+	tmpl, err := template.ParseFiles("templates/auth/auth.html")
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-GetByLogin: Invalid request payload")
+		return echo.ErrNotFound
 	}
 	var user model.User
-	user.Login = requestData.Login
-	user.Password = []byte(requestData.Password)
-	err = h.validate.VarCtx(c.Request().Context(), requestData.Login, "required")
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Not valid data: login field is empty")
+	if errBind := c.Bind(&user); errBind != nil {
+		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
+			"errorMsg": "Failed to read fields",
+		})
 	}
-	err = h.validate.VarCtx(c.Request().Context(), requestData.Password, "required")
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Not valid data: password field is empty")
-	}
-	tokenPair, err := h.userService.Login(c.Request().Context(), &user)
+	err = h.validate.StructCtx(c.Request().Context(), user)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
-			"ID":           user.ID,
-			"Login":        user.Login,
-			"Password":     user.Password,
-			"RefreshToken": user.RefreshToken,
-		}).Errorf("Handler-SignUp: error: %v", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to log in")
+			"Login":    user.Login,
+			"Password": user.Password,
+		}).Errorf("login: %v", err)
+		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
+			"errorMsg": "Invalid fields! The fields have not been validated",
+		})
 	}
-	return c.JSON(http.StatusOK, echo.Map{
-		"Access Token : ":  tokenPair.AccessToken,
-		"Refresh Token : ": tokenPair.RefreshToken,
-	})
-}
-
-// Refresh calls method of Service by handler
-// @Summary Refresh tokens
-// @ID refresh-token
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param input body model.TokenPair true "Please fill the access and refresh tokens fields."
-// @Success 200 {string} string "tokens"
-// @Failure 400 {string} error
-// @Router /refresh [post]
-func (h *Handler) Refresh(c echo.Context) error {
-	var requestData model.TokenPair
-	err := c.Bind(&requestData)
+	userID, err := h.userService.GetByLogin(c.Request().Context(), &user)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Refresh: Invalid request payload")
+		logrus.Errorf("login: %v", err)
+		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
+			"errorMsg": "Wrong login or password",
+		})
 	}
-	var tokens model.TokenPair
-	tokens.AccessToken = requestData.AccessToken
-	tokens.RefreshToken = requestData.RefreshToken
-	err = h.validate.VarCtx(c.Request().Context(), requestData.AccessToken, "required")
+	store := NewRedisStore(h.cfg)
+	session, err := store.Get(c.Request(), "SESSION_ID")
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Not valid data: access token field is empty")
+		logrus.Errorf("login: %v", err)
+		return echo.ErrNotFound
 	}
-	err = h.validate.VarCtx(c.Request().Context(), requestData.RefreshToken, "required")
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Not valid data: refresh token field is empty")
+	session.Values["id"] = userID.String()
+	session.Values["login"] = user.Login
+	session.Values["password"] = user.Password
+	if err = session.Save(c.Request(), c.Response().Writer); err != nil {
+		logrus.Errorf("login: %v", err)
+		return tmpl.ExecuteTemplate(c.Response().Writer, "auth", map[string]string{
+			"errorMsg": "Error saving session",
+		})
 	}
-	newTokens, err := h.userService.Refresh(c.Request().Context(), &tokens)
-	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"Access Token":  tokens.AccessToken,
-			"Refresh Token": tokens.RefreshToken,
-		}).Errorf("Handler-Refresh: error: %v", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to refresh")
-	}
-	return c.JSON(http.StatusOK, echo.Map{
-		"Access Token : ":  newTokens.AccessToken,
-		"Refresh Token : ": newTokens.RefreshToken,
-	})
+	return c.Redirect(http.StatusSeeOther, "/index")
 }
 
 // DeleteAccount calls method of Service by handler
-// @Summary Delete your account
-// @Security ApiKeyAuth
-// @ID delete-account
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Success 200 {string} string
-// @Failure 400 {string} error
-// @Router /delete [delete]
 func (h *Handler) DeleteAccount(c echo.Context) error {
-	authHeader := c.Request().Header.Get("Authorization")
-	id, err := h.balanceService.GetIDByToken(authHeader)
+	profileID, err := h.getProfileID(c)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-GetBalance-GetIDByToken: failed to get ID by token")
+		return echo.ErrUnauthorized
 	}
-	str, err := h.userService.DeleteAccount(c.Request().Context(), id)
+	_, err = h.userService.DeleteAccount(c.Request().Context(), profileID)
 	if err != nil {
+		var e *berrors.BusinessError
+		if errors.As(err, &e) {
+			return c.HTML(http.StatusBadRequest, `<script>alert('`+e.Message+`');
+			window.location.href = '/';</script>`)
+		}
 		logrus.WithFields(logrus.Fields{
-			"Id": id,
-		}).Errorf("Handler-Refresh: error: %v", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to delete")
+			"ID": profileID,
+		}).Errorf("deleteAccount: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to delete your account');
+		window.location.href = '/index';</script>`)
 	}
-	return c.JSON(http.StatusOK, str)
+	return c.HTML(http.StatusOK, `<script>alert('Your account has been successfully deleted!');
+	 window.location.href = '/';</script>`)
 }
 
 // Deposit calls method of Service by handler
-// @Summary Balance operation deposit
-// @Security ApiKeyAuth
-// @ID deposit
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param input body model.Balance true "Please input the amount of money to deposit"
-// @Success 200 {string} string
-// @Failure 400 {string} error
-// @Router /deposit [post]
 func (h *Handler) Deposit(c echo.Context) error {
-	var (
-		operation   float64
-		requestData = model.Balance{
-			Operation: operation,
-		}
-		operationType = "Deposit"
-		output        = func(money float64) string {
-			return fmt.Sprintf("%s of %.2f successfully made.", operationType, math.Abs(money))
-		}
-	)
-	err := c.Bind(&requestData)
+	profileID, err := h.getProfileID(c)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Deposit: invalid request payload")
+		return echo.ErrUnauthorized
 	}
-	err = h.validate.VarCtx(c.Request().Context(), requestData.Operation, "required,gt=0")
+	sumOfMoney, err := strconv.ParseFloat(c.FormValue("operation"), 64)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Deposit: failed to validate operation")
-	}
-	authHeader := c.Request().Header.Get("Authorization")
-	profileid, err := h.balanceService.GetIDByToken(authHeader)
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Deposit-GetIDByToken: failed to get ID by token")
+		logrus.Errorf("deposit: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Invalid sum of money');
+		window.location.href = '/index';</script>`)
 	}
 	balance := model.Balance{
-		ProfileID: profileid,
-		Operation: requestData.Operation,
+		ProfileID: profileID,
+		Operation: sumOfMoney,
 	}
-	money, err := h.balanceService.BalanceOperation(c.Request().Context(), &balance)
+	_, err = h.balanceService.BalanceOperation(c.Request().Context(), &balance)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
 			"BalanceId": balance.BalanceID,
 			"ProfileId": balance.ProfileID,
 			"Operation": balance.Operation,
-		}).Errorf("Handler-Deposit: error: %v", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "Handler-Deposit: failed to made balance operation")
+		}).Errorf("deposit: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to made balance operation');
+		 window.location.href = '/index';</script>`)
 	}
-	return c.JSON(http.StatusOK, output(money))
+	return c.HTML(http.StatusOK, `<script>alert('Deposit of `+fmt.Sprintf("%.2f", sumOfMoney)+
+		`$ approved!'); window.location.href = '/index';</script>`)
 }
 
 // Withdraw calls method of Service by handler
-// @Summary Balance operation withdraw
-// @Security ApiKeyAuth
-// @ID withdraw
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param input body model.Balance true "Please input the amount of money to withdraw"
-// @Success 200 {string} string
-// @Failure 400 {string} error
-// @Router /withdraw [post]
 func (h *Handler) Withdraw(c echo.Context) error {
-	var (
-		operation   float64
-		requestData = model.Balance{
-			Operation: operation,
-		}
-		operationType = "Withdraw"
-		output        = func(money float64) string {
-			return fmt.Sprintf("%s of %.2f successfully made.", operationType, math.Abs(money))
-		}
-	)
-	err := c.Bind(&requestData)
+	profileID, err := h.getProfileID(c)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Withdraw: invalid request payload")
+		return echo.ErrUnauthorized
 	}
-	err = h.validate.VarCtx(c.Request().Context(), requestData.Operation, "required,gt=0")
+	sumOfMoney, err := strconv.ParseFloat(c.FormValue("operation"), 64)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Withdraw: failed to validate operation")
-	}
-	authHeader := c.Request().Header.Get("Authorization")
-	profileid, err := h.balanceService.GetIDByToken(authHeader)
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Withdraw-GetIDByToken: failed to get ID by token")
+		logrus.Errorf("withdraw: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Invalid sum of money');
+		window.location.href = '/index';</script>`)
 	}
 	balance := model.Balance{
-		ProfileID: profileid,
-		Operation: requestData.Operation,
+		ProfileID: profileID,
+		Operation: sumOfMoney,
 	}
 	balance.Operation = -balance.Operation
-	money, err := h.balanceService.BalanceOperation(c.Request().Context(), &balance)
+	_, err = h.balanceService.BalanceOperation(c.Request().Context(), &balance)
 	if err != nil {
+		var e *berrors.BusinessError
+		if errors.As(err, &e) {
+			return c.HTML(http.StatusBadRequest, `<script>alert('`+e.Message+`');
+			window.location.href = '/index';</script>`)
+		}
 		logrus.WithFields(logrus.Fields{
 			"BalanceId": balance.BalanceID,
 			"ProfileId": balance.ProfileID,
 			"Operation": balance.Operation,
-		}).Errorf("Handler-Withdraw: error: %v", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "Handler-Withdraw: failed to made balance operation")
+		}).Errorf("withdraw: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to made balance operation');
+		 window.location.href = '/index';</script>`)
 	}
-	return c.JSON(http.StatusOK, output(money))
+	return c.HTML(http.StatusOK, `<script>alert('Withdraw of `+fmt.Sprintf("%.2f", sumOfMoney)+
+		`$ approved!'); window.location.href = '/index';</script>`)
 }
 
-// GetBalance calls method of Service by handler
-// @Summary Check sum of money on your balance
-// @Security ApiKeyAuth
-// @ID get-operation
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Success 200 {string} string
-// @Failure 400 {string} error
-// @Router /getbalance [get]
-func (h *Handler) GetBalance(c echo.Context) error {
-	authHeader := c.Request().Header.Get("Authorization")
-	profileid, err := h.balanceService.GetIDByToken(authHeader)
+// CreatePosition calls method of Service by handler
+func (h *Handler) CreatePosition(c echo.Context) error {
+	profileID, err := h.getProfileID(c)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-GetBalance-GetIDByToken: failed to get ID by token")
+		return echo.ErrUnauthorized
 	}
-	money, err := h.balanceService.GetBalance(c.Request().Context(), profileid)
+	sharesCount, err := decimal.NewFromString(c.FormValue("sharescount"))
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"ProfileId": profileid,
-		}).Errorf("Handler-GetBalance: error: %v", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get balance")
+		logrus.Errorf("createPosition: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Invalid shares count value');
+		 window.location.href = '/index';</script>`)
 	}
-	return c.JSON(http.StatusOK, fmt.Sprintf("Balance: %f", money))
-}
-
-// nolint dupl // in swagger can't bind two routers to one method
-// Long calls method of Service by handler
-// @Summary Invest money with strategy "long"
-// @Security ApiKeyAuth
-// @ID long
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param input body dealData true "Please fill the SraresCount,Company,StopLoss and TakeProfit fields."
-// @Success 200 {string} string
-// @Failure 400 {string} error
-// @Router /long [post]
-func (h *Handler) Long(c echo.Context) error {
-	authHeader := c.Request().Header.Get("Authorization")
-	profileid, err := h.balanceService.GetIDByToken(authHeader)
+	stopLoss, err := decimal.NewFromString(c.FormValue("stoploss"))
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Long-GetIDByToken: failed to get ID by token")
+		logrus.Errorf("createPosition: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Invalid stop loss value');
+		 window.location.href = '/index';</script>`)
 	}
-	var requestData dealData
-	err = c.Bind(&requestData)
+	takeProfit, err := decimal.NewFromString(c.FormValue("takeprofit"))
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Long: invalid request payload")
+		logrus.Errorf("createPosition: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Invalid take profit value');
+		 window.location.href = '/index';</script>`)
+	}
+	strategy := "long"
+	if stopLoss.Cmp(takeProfit) == 1 {
+		strategy = "short"
 	}
 	deal := &model.Deal{
-		ProfileID:   profileid,
-		SharesCount: decimal.NewFromFloat(requestData.SharesCount),
-		Company:     requestData.Company,
-		StopLoss:    decimal.NewFromFloat(requestData.StopLoss),
-		TakeProfit:  decimal.NewFromFloat(requestData.TakeProfit),
-	}
-	err = h.validate.StructCtx(c.Request().Context(), requestData)
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Long: failed to validate operation")
+		ProfileID:   profileID,
+		SharesCount: sharesCount,
+		Company:     c.FormValue("company"),
+		StopLoss:    stopLoss,
+		TakeProfit:  takeProfit,
 	}
 	err = h.tradingService.CreatePosition(c.Request().Context(), deal)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Long: failed to create position long")
+		var e *berrors.BusinessError
+		if errors.As(err, &e) {
+			return c.HTML(http.StatusBadRequest, `<script>alert('`+e.Message+`');
+			window.location.href = '/index';</script>`)
+		}
+		logrus.Errorf("createPosition: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to create position');
+		 window.location.href = '/index';</script>`)
 	}
-	return c.JSON(http.StatusOK, "Position long created.")
-}
-
-// nolint dupl // in swagger can't bind two routers to one method
-// Short calls method of Service by handler
-// @Summary Invest money with strategy "short"
-// @Security ApiKeyAuth
-// @ID short
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param input body dealData true "Please fill the fields about Share."
-// @Success 200 {string} string
-// @Failure 400 {string} error
-// @Router /short [post]
-func (h *Handler) Short(c echo.Context) error {
-	authHeader := c.Request().Header.Get("Authorization")
-	profileid, err := h.balanceService.GetIDByToken(authHeader)
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Short-GetIDByToken: failed to get ID by token")
-	}
-	var requestData dealData
-	err = c.Bind(&requestData)
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Short: invalid request payload")
-	}
-	deal := &model.Deal{
-		ProfileID:   profileid,
-		SharesCount: decimal.NewFromFloat(requestData.SharesCount),
-		Company:     requestData.Company,
-		StopLoss:    decimal.NewFromFloat(requestData.StopLoss),
-		TakeProfit:  decimal.NewFromFloat(requestData.TakeProfit),
-	}
-	err = h.validate.StructCtx(c.Request().Context(), requestData)
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Short: failed to validate operation")
-	}
-	err = h.tradingService.CreatePosition(c.Request().Context(), deal)
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-Short: failed to create position short")
-	}
-	return c.JSON(http.StatusOK, "Position short created.")
+	return c.HTML(http.StatusOK, `<script>alert('Position `+strategy+` created!');
+	 window.location.href = '/index';</script>`)
 }
 
 // ClosePositionManually calls method of Service by handler
-// @Summary Close the position
-// @Security ApiKeyAuth
-// @ID close-position
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param input body closeData true "Please fill the id of deal"
-// @Success 200 {string} string
-// @Failure 400 {string} error
-// @Router /closeposition [post]
 func (h *Handler) ClosePositionManually(c echo.Context) error {
-	authHeader := c.Request().Header.Get("Authorization")
-	profileid, err := h.balanceService.GetIDByToken(authHeader)
+	profileID, err := h.getProfileID(c)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-ClosePositionManually-GetIDByToken: failed to get ID by token")
+		return echo.ErrUnauthorized
 	}
-	var requestData closeData
-	err = c.Bind(&requestData)
+	dealUUID, err := uuid.Parse(c.FormValue("dealid"))
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-ClosePositionManually: invalid request payload")
+		logrus.Errorf("closePositionManually: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Invalid deal ID');
+		 window.location.href = '/index';</script>`)
 	}
-	dealUUID, err := uuid.Parse(requestData.DealID)
+	profit, err := h.tradingService.ClosePositionManually(c.Request().Context(), dealUUID, profileID)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-ClosePositionManually: failed to parse id")
+		logrus.Errorf("closePositionManually: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to close position');
+		 window.location.href = '/index';</script>`)
 	}
-	profit, err := h.tradingService.ClosePositionManually(c.Request().Context(), dealUUID, profileid)
-	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-ClosePositionManually: failed to close position")
-	}
-	return c.JSON(http.StatusOK, fmt.Sprintf("Position closed with profit %f", profit))
+	return c.HTML(http.StatusOK, `<script>alert('Position closed with profit `+fmt.Sprintf("%.2f", profit)+`');
+	 window.location.href = '/index';</script>`)
 }
 
 // GetUnclosedPositions calls method of Service by handler
-// @Summary Show all unclosed positions
-// @Security ApiKeyAuth
-// @ID get-unclosed
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Success 200 {object} model.Deal
-// @Failure 400 {string} error
-// @Router /getunclosed [get]
 func (h *Handler) GetUnclosedPositions(c echo.Context) error {
-	authHeader := c.Request().Header.Get("Authorization")
-	profileid, err := h.balanceService.GetIDByToken(authHeader)
+	profileID, err := h.getProfileID(c)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-GetUnclosedPositions-GetIDByToken: failed to get ID by token")
+		return echo.ErrUnauthorized
 	}
-	unclosedDeals, err := h.tradingService.GetUnclosedPositions(c.Request().Context(), profileid)
+	unclosedPositions, err := h.tradingService.GetUnclosedPositions(c.Request().Context(), profileID)
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-GetUnclosedPositions: failed to get unclosed positions")
+		logrus.Errorf("getUnclosedPositions: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to get positions');
+		 window.location.href = '/index';</script>`)
 	}
-	return c.JSON(http.StatusOK, unclosedDeals)
+	return c.JSON(http.StatusOK, unclosedPositions)
+}
+
+// GetClosedPositions calls method of Service by handler
+func (h *Handler) GetClosedPositions(c echo.Context) error {
+	profileID, err := h.getProfileID(c)
+	if err != nil {
+		return echo.ErrUnauthorized
+	}
+	closedPositions, err := h.tradingService.GetClosedPositions(c.Request().Context(), profileID)
+	if err != nil {
+		logrus.Errorf("getClosedPositions: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to get positions');
+		 window.location.href = '/index';</script>`)
+	}
+	return c.JSON(http.StatusOK, closedPositions)
 }
 
 // GetPrices calls method of Service by handler
-// @Summary Show prices of shares
-// @ID get-prices
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Success 200 {object} model.Share
-// @Failure 400 {string} error
-// @Router /getprices [get]
 func (h *Handler) GetPrices(c echo.Context) error {
 	shares, err := h.tradingService.GetPrices(c.Request().Context())
 	if err != nil {
-		logrus.Errorf("error: %v", err)
-		return c.JSON(http.StatusBadRequest, "Handler-GetPrices: failed to get shares")
+		logrus.Infof("getPrices: %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to get shares');
+		 window.location.href = '/index';</script>`)
 	}
 	return c.JSON(http.StatusOK, shares)
+}
+
+// Logout delete session of user
+func (h *Handler) Logout(c echo.Context) error {
+	store := NewRedisStore(h.cfg)
+	cookie, err := c.Cookie("SESSION_ID")
+	if err != nil {
+		logrus.Errorf("logout %v", err)
+		return c.HTML(http.StatusInternalServerError, `<script>alert('Failed to get cookie');
+		window.location.href = '/';</script>`)
+	}
+	session, err := store.Get(c.Request(), cookie.Name)
+	if err != nil {
+		logrus.Errorf("logout %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to get your session');
+		window.location.href = '/';</script>`)
+	}
+	session.Options.MaxAge = -1
+	if err = session.Save(c.Request(), c.Response().Writer); err != nil {
+		logrus.Errorf("logout %v", err)
+		return c.HTML(http.StatusBadRequest, `<script>alert('Failed to log out');
+		 window.location.href = '/index';</script>`)
+	}
+	return c.Redirect(http.StatusSeeOther, "/")
 }

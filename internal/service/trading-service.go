@@ -13,6 +13,7 @@ type TradingRepository interface {
 	CreatePosition(ctx context.Context, deal *model.Deal) error
 	ClosePositionManually(ctx context.Context, dealid, profileid uuid.UUID) (float64, error)
 	GetUnclosedPositions(ctx context.Context, profileid uuid.UUID) ([]*model.Deal, error)
+	GetClosedPositions(ctx context.Context, profileid uuid.UUID) ([]*model.Deal, error)
 	GetPrices(ctx context.Context) ([]model.Share, error)
 }
 
@@ -51,6 +52,15 @@ func (ts *TradingService) GetUnclosedPositions(ctx context.Context, profileid uu
 		return nil, fmt.Errorf("getUnclosedPositions %w", err)
 	}
 	return unclosedDeals, nil
+}
+
+// GetClosedPositions is a method of TradingService calls method of Repository
+func (ts *TradingService) GetClosedPositions(ctx context.Context, profileid uuid.UUID) ([]*model.Deal, error) {
+	closedDeals, err := ts.tRep.GetClosedPositions(ctx, profileid)
+	if err != nil {
+		return nil, fmt.Errorf("getClosedPositions %w", err)
+	}
+	return closedDeals, nil
 }
 
 // GetPrices is a method of TradingService calls method of Repository

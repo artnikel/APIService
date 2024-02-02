@@ -37,16 +37,3 @@ func TestGetBalanceAndOperation(t *testing.T) {
 	require.Equal(t, money, testBalance.Operation)
 	rep.AssertExpectations(t)
 }
-
-func TestGetIDByToken(t *testing.T) {
-	rep := new(mocks.BalanceRepository)
-	srv := NewBalanceService(rep, cfg)
-	urep := new(mocks.UserRepository)
-	usrv := NewUserService(urep, cfg)
-	rep.On("GetIDByToken", mock.AnythingOfType("string")).Return(testBalance.ProfileID, nil).Once()
-	tokens, err := usrv.GenerateTokenPair(testBalance.ProfileID)
-	require.NoError(t, err)
-	profileid, err := srv.GetIDByToken("Bearer " + tokens.AccessToken)
-	require.NoError(t, err)
-	require.Equal(t, profileid, testBalance.ProfileID)
-}
