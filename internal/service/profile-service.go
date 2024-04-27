@@ -25,8 +25,11 @@ type UserService struct {
 }
 
 // NewUserService accepts UserRepository object and returnes an object of type *UserService
-func NewUserService(uRep UserRepository, cfg config.Variables) *UserService {
-	return &UserService{uRep: uRep, cfg: cfg}
+func NewUserService(uRep UserRepository, cfg *config.Variables) *UserService {
+	return &UserService{
+		uRep: uRep,
+		cfg:  *cfg,
+	}
 }
 
 const (

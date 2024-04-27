@@ -24,8 +24,8 @@ type BalanceService struct {
 }
 
 // NewBalanceService accepts BalanceRepository object and returnes an object of type *BalanceService
-func NewBalanceService(bRep BalanceRepository, cfg config.Variables) *BalanceService {
-	return &BalanceService{bRep: bRep, cfg: cfg}
+func NewBalanceService(bRep BalanceRepository, cfg *config.Variables) *BalanceService {
+	return &BalanceService{bRep: bRep, cfg: *cfg}
 }
 
 // BalanceOperation is a method of BalanceService calls method of Repository

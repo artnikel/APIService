@@ -53,18 +53,18 @@ type Handler struct {
 }
 
 // NewHandler creates a new instance of the Handler struct.
-func NewHandler(userService UserService, balanceService BalanceService, tradingService TradingService, v *validator.Validate, cfg config.Variables) *Handler {
+func NewHandler(userService UserService, balanceService BalanceService, tradingService TradingService, v *validator.Validate, cfg *config.Variables) *Handler {
 	return &Handler{
 		userService:    userService,
 		balanceService: balanceService,
 		tradingService: tradingService,
 		validate:       v,
-		cfg:            cfg,
+		cfg:            *cfg,
 	}
 }
 
 // NewRedisStore creates a new Redis storage instance for sessions
-func NewRedisStore(cfg config.Variables) *redistore.RediStore {
+func NewRedisStore(cfg *config.Variables) *redistore.RediStore {
 	// nolint gonmd
 	store, err := redistore.NewRediStore(10, "tcp", cfg.RedisPriceAddress, "", []byte(cfg.TokenSignature))
 	if err != nil {
@@ -80,7 +80,7 @@ func (h *Handler) getProfileID(c echo.Context) (uuid.UUID, error) {
 		logrus.Errorf("getProfileID: %v", err)
 		return uuid.Nil, c.Redirect(http.StatusSeeOther, "/")
 	}
-	store := NewRedisStore(h.cfg)
+	store := NewRedisStore(&h.cfg)
 	session, err := store.Get(c.Request(), cookie.Name)
 	if err != nil {
 		logrus.Errorf("getProfileID: %v", err)
@@ -183,7 +183,7 @@ func (h *Handler) SignUp(c echo.Context) error {
 			"errorMsg": "Failed to log in",
 		})
 	}
-	store := NewRedisStore(h.cfg)
+	store := NewRedisStore(&h.cfg)
 	session, err := store.Get(c.Request(), "SESSION_ID")
 	if err != nil {
 		logrus.Errorf("signUp: %v", err)
@@ -230,7 +230,7 @@ func (h *Handler) Login(c echo.Context) error {
 			"errorMsg": "Wrong login or password",
 		})
 	}
-	store := NewRedisStore(h.cfg)
+	store := NewRedisStore(&h.cfg)
 	session, err := store.Get(c.Request(), "SESSION_ID")
 	if err != nil {
 		logrus.Errorf("login: %v", err)
@@ -452,7 +452,7 @@ func (h *Handler) GetPrices(c echo.Context) error {
 
 // Logout delete session of user
 func (h *Handler) Logout(c echo.Context) error {
-	store := NewRedisStore(h.cfg)
+	store := NewRedisStore(&h.cfg)
 	cookie, err := c.Cookie("SESSION_ID")
 	if err != nil {
 		logrus.Errorf("logout %v", err)

@@ -27,15 +27,15 @@ func main() {
 		log.Fatalf("could not parse config: %v", err)
 	}
 	v := validator.New()
-	uconn, err := grpc.Dial("localhost:8090", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	uconn, err := grpc.Dial(cfg.ProfileAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("could not connect: %v", err)
 	}
-	bconn, err := grpc.Dial("localhost:8095", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	bconn, err := grpc.Dial(cfg.BalanceAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("could not connect: %v", err)
 	}
-	tconn, err := grpc.Dial("localhost:8088", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	tconn, err := grpc.Dial(cfg.TradingAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("could not connect: %v", err)
 	}
@@ -59,16 +59,16 @@ func main() {
 	urep := repository.NewProfileRepository(uclient)
 	brep := repository.NewBalanceRepository(bclient)
 	trep := repository.NewTradingRepository(tclient)
-	usrv := service.NewUserService(urep, *cfg)
-	bsrv := service.NewBalanceService(brep, *cfg)
+	usrv := service.NewUserService(urep, cfg)
+	bsrv := service.NewBalanceService(brep, cfg)
 	tsrv := service.NewTradingService(trep)
-	hndl := handler.NewHandler(usrv, bsrv, tsrv, v, *cfg)
+	hndl := handler.NewHandler(usrv, bsrv, tsrv, v, cfg)
 	fmt.Println("API Service started")
 	e := echo.New()
 	e.Static("/static", "static")
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	store := handler.NewRedisStore(*cfg)
+	store := handler.NewRedisStore(cfg)
 	store.SetMaxAge(10 * 24 * 3600)
 	e.Use(session.Middleware(store))
 	e.GET("/", hndl.Auth)
@@ -85,6 +85,6 @@ func main() {
 	e.GET("/getclosed", hndl.GetClosedPositions)
 	e.GET("/getprices", hndl.GetPrices)
 	e.POST("/logout", hndl.Logout)
-	address := fmt.Sprintf(":%d", cfg.TradingAPIPort)
+	address := fmt.Sprintf(":%d", cfg.APIPort)
 	e.Logger.Fatal(e.Start(address))
 }

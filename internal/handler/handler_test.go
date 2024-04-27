@@ -61,7 +61,7 @@ func TestMain(m *testing.M) {
 
 func TestSignUp(t *testing.T) {
 	srv := new(mocks.UserService)
-	hndl := NewHandler(srv, nil, nil, v, *cfg)
+	hndl := NewHandler(srv, nil, nil, v, cfg)
 
 	formData := url.Values{}
 	formData.Set("login", testUser.Login)
@@ -95,7 +95,7 @@ func TestSignUp(t *testing.T) {
 
 func TestLogin(t *testing.T) {
 	srv := new(mocks.UserService)
-	hndl := NewHandler(srv, nil, nil, v, *cfg)
+	hndl := NewHandler(srv, nil, nil, v, cfg)
 
 	formData := url.Values{}
 	formData.Set("login", testUser.Login)
@@ -130,7 +130,7 @@ func TestLogin(t *testing.T) {
 func TestDeleteAccount(t *testing.T) {
 	usrv := new(mocks.UserService)
 	bsrv := new(mocks.BalanceService)
-	hndl := NewHandler(usrv, bsrv, nil, v, *cfg)
+	hndl := NewHandler(usrv, bsrv, nil, v, cfg)
 	jsonData, err := json.Marshal(testBalance.ProfileID)
 	require.NoError(t, err)
 	usrv.On("DeleteAccount", mock.Anything, mock.AnythingOfType("uuid.UUID")).Return(testUser.ID.String(), nil).Once()
@@ -149,8 +149,8 @@ func TestDeleteAccount(t *testing.T) {
 
 func TestDeposit(t *testing.T) {
 	srv := new(mocks.BalanceService)
-	hndl := NewHandler(nil, srv, nil, v, *cfg)
-	store := NewRedisStore(*cfg)
+	hndl := NewHandler(nil, srv, nil, v, cfg)
+	store := NewRedisStore(cfg)
 
 	srv.On("BalanceOperation", mock.Anything, mock.AnythingOfType("*model.Balance")).Return(testBalance.Operation, nil).Once()
 
@@ -175,8 +175,8 @@ func TestDeposit(t *testing.T) {
 
 func TestWithdraw(t *testing.T) {
 	srv := new(mocks.BalanceService)
-	hndl := NewHandler(nil, srv, nil, v, *cfg)
-	store := NewRedisStore(*cfg)
+	hndl := NewHandler(nil, srv, nil, v, cfg)
+	store := NewRedisStore(cfg)
 
 	srv.On("BalanceOperation", mock.Anything, mock.AnythingOfType("*model.Balance")).Return(testBalance.Operation, nil).Once()
 
@@ -201,8 +201,8 @@ func TestWithdraw(t *testing.T) {
 
 func TestCreatePosition(t *testing.T) {
 	srv := new(mocks.TradingService)
-	hndl := NewHandler(nil, nil, srv, v, *cfg)
-	store := NewRedisStore(*cfg)
+	hndl := NewHandler(nil, nil, srv, v, cfg)
+	store := NewRedisStore(cfg)
 
 	srv.On("CreatePosition", mock.Anything, mock.AnythingOfType("*model.Deal")).Return(nil).Once()
 
@@ -228,8 +228,8 @@ func TestCreatePosition(t *testing.T) {
 func TestClosePositionManually(t *testing.T) {
 	tsrv := new(mocks.TradingService)
 	bsrv := new(mocks.BalanceService)
-	hndl := NewHandler(nil, bsrv, tsrv, v, *cfg)
-	store := NewRedisStore(*cfg)
+	hndl := NewHandler(nil, bsrv, tsrv, v, cfg)
+	store := NewRedisStore(cfg)
 
 	tsrv.On("ClosePositionManually", mock.Anything, mock.AnythingOfType("uuid.UUID"), mock.AnythingOfType("uuid.UUID")).
 		Return(testDeal.Profit.InexactFloat64(), nil).Once()
@@ -254,7 +254,7 @@ func TestClosePositionManually(t *testing.T) {
 func TestGetUnclosedPositions(t *testing.T) {
 	tsrv := new(mocks.TradingService)
 	bsrv := new(mocks.BalanceService)
-	hndl := NewHandler(nil, bsrv, tsrv, v, *cfg)
+	hndl := NewHandler(nil, bsrv, tsrv, v, cfg)
 
 	var testDeals []*model.Deal
 	testDeals = append(testDeals, &testDeal)
@@ -275,7 +275,7 @@ func TestGetUnclosedPositions(t *testing.T) {
 func TestGetClosedPositions(t *testing.T) {
 	tsrv := new(mocks.TradingService)
 	bsrv := new(mocks.BalanceService)
-	hndl := NewHandler(nil, bsrv, tsrv, v, *cfg)
+	hndl := NewHandler(nil, bsrv, tsrv, v, cfg)
 
 	var testDeals []*model.Deal
 	testDeals = append(testDeals, &testDeal)
@@ -295,7 +295,7 @@ func TestGetClosedPositions(t *testing.T) {
 
 func TestGetPrices(t *testing.T) {
 	srv := new(mocks.TradingService)
-	hndl := NewHandler(nil, nil, srv, v, *cfg)
+	hndl := NewHandler(nil, nil, srv, v, cfg)
 	var testShares []model.Share
 	testShares = append(testShares, testShare)
 	srv.On("GetPrices", mock.Anything).Return(testShares, nil).Once()

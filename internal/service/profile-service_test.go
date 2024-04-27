@@ -24,7 +24,7 @@ var (
 
 func TestSignUp(t *testing.T) {
 	rep := new(mocks.UserRepository)
-	srv := NewUserService(rep, cfg)
+	srv := NewUserService(rep, &cfg)
 	rep.On("SignUp", mock.Anything, mock.AnythingOfType("*model.User")).Return(nil).Once()
 	err := srv.SignUp(context.Background(), &testUser)
 	require.NoError(t, err)
@@ -37,7 +37,7 @@ func TestLogin(t *testing.T) {
 	require.NoError(t, err)
 	rep.On("GetByLogin", mock.Anything, mock.AnythingOfType("string")).
 		Return(hashedbytes, testUser.ID, nil)
-	srv := NewUserService(rep, cfg)
+	srv := NewUserService(rep, &cfg)
 	_, err = srv.GetByLogin(context.Background(), &testUser)
 	require.NoError(t, err)
 	rep.AssertExpectations(t)
@@ -45,7 +45,7 @@ func TestLogin(t *testing.T) {
 
 func TestDeleteAccount(t *testing.T) {
 	rep := new(mocks.UserRepository)
-	srv := NewUserService(rep, cfg)
+	srv := NewUserService(rep, &cfg)
 
 	rep.On("DeleteAccount", mock.Anything, mock.AnythingOfType("uuid.UUID")).
 		Return(testUser.ID.String(), nil)
@@ -56,7 +56,7 @@ func TestDeleteAccount(t *testing.T) {
 
 func TestGenerateHash(t *testing.T) {
 	rep := new(mocks.UserRepository)
-	srv := NewUserService(rep, cfg)
+	srv := NewUserService(rep, &cfg)
 	testBytes := []byte("test")
 	_, err := srv.GenerateHash(string(testBytes))
 	require.NoError(t, err)
@@ -65,7 +65,7 @@ func TestGenerateHash(t *testing.T) {
 
 func TestCheckPasswordHash(t *testing.T) {
 	rep := new(mocks.UserRepository)
-	srv := NewUserService(rep, cfg)
+	srv := NewUserService(rep, &cfg)
 	testBytes := []byte("test")
 	hashedBytes, err := srv.GenerateHash(string(testBytes))
 	require.NoError(t, err)
