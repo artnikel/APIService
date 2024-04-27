@@ -66,7 +66,7 @@ func NewHandler(userService UserService, balanceService BalanceService, tradingS
 // NewRedisStore creates a new Redis storage instance for sessions
 func NewRedisStore(cfg *config.Variables) *redistore.RediStore {
 	// nolint gonmd
-	store, err := redistore.NewRediStore(10, "tcp", cfg.RedisPriceAddress, "", []byte(cfg.TokenSignature))
+	store, err := redistore.NewRediStore(10, "tcp", cfg.RedisPriceAddress, "", []byte(cfg.HashKey))
 	if err != nil {
 		log.Fatalf("failed to create redis store: %v", err)
 	}
