@@ -184,11 +184,7 @@ func (h *Handler) SignUp(c echo.Context) error {
 		})
 	}
 	store := NewRedisStore(&h.cfg)
-	session, err := store.Get(c.Request(), "SESSION_ID")
-	if err != nil {
-		logrus.Errorf("signUp: %v", err)
-		return echo.ErrNotFound
-	}
+	session, _ := store.Get(c.Request(), "SESSION_ID")
 	session.Values["id"] = userID.String()
 	session.Values["login"] = user.Login
 	session.Values["password"] = user.Password
